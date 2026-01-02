@@ -42,3 +42,8 @@ export async function getTokenPayload(): Promise<TokenPayload | null> {
     return null;
   }
 }
+
+export async function getUserId(): Promise<string | null> {
+  const payload = await getTokenPayload();
+  return payload?.userSession.userId || null;
+}

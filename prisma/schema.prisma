@@ -18,6 +18,34 @@ enum Role {
   USER
 }
 
+enum OrderType {
+  IRONING
+  CLEANING
+}
+
+enum OrderPaymentStatus {
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  CANCELLED
+  REFUNDED
+}
+
+enum OrderPaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  DAMAGED
+  LOST
+  DELIVERED
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique @map("email")
@@ -27,6 +55,112 @@ model User {
   role      Role     @default(USER) @map("role")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  orders    Order[]
 
   @@map("users")
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String   @map("name")
+  lastName  String   @map("last_name")
+  phone     String   @map("phone")
+  address   String?  @map("address")
+  city      String?  @map("city")
+  state     String?  @map("state")
+  zip       String?  @map("zip")
+  country   String?  @map("country")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  Orders    Order[]
+
+  @@map("customers")
+}
+
+model IroningItem {
+  id        String   @id @default(uuid())
+  quantity  Int      @map("quantity")
+  total     Float    @map("total")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("ironing_items")
+}
+
+model CleaningItem {
+  id        String   @id @default(uuid())
+  item_name String   @map("item_name")
+  quantity  Int      @map("quantity")
+  total     Float    @map("total")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("cleaning_items")
+}
+
+model OrderItem {
+  id        String    @id @default(uuid())
+  type      OrderType @map("type")
+  orderId   String    @map("order_id")
+  itemId    String    @map("item_id") // IroningItem | CleaningItem
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+}
+
+model Storage {
+  id              String   @id @default(uuid())
+  storageNumber   Int      @unique @map("storage_number")
+  totalCapacity   Int      @map("total_capacity")
+  usedCapacity    Int      @default(0) @map("used_capacity")
+  fromNumberRange Int      @map("from_number_range")
+  toNumberRange   Int      @map("to_number_range")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  orders             Order[]
+  activeOrderNumbers ActiveOrderNumber[]
+
+  @@map("storages")
+}
+
+model ActiveOrderNumber {
+  id          String   @id @default(uuid())
+  orderNumber Int      @unique @map("order_number")
+  orderId     String   @unique @map("order_id")
+  storageId   String   @map("storage_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  storage Storage @relation(fields: [storageId], references: [id], onDelete: Cascade)
+
+  @@map("active_order_numbers")
+}
+
+model Order {
+  id            String             @id @default(uuid())
+  type          OrderType          @map("type")
+  customerId    String             @map("customer_id")
+  paymentStatus OrderPaymentStatus @map("payment_status")
+  paymentMethod OrderPaymentMethod @map("payment_method") // Cash | Card | Transfer
+  status        OrderStatus        @map("status") // Pending | In Progress | Completed | Cancelled | Damaged | Lost | Delivered | PickedUp
+  total         Float              @map("total")
+  totalPaid     Float              @default(0) @map("total_paid")
+  orderItems    OrderItem[]
+  orderNumber   Int                @map("order_number")
+  storageId     String?            @map("storage_id")
+  mainOrderId   String?            @map("main_order_id")
+  userId        String             @map("user_id")
+  createdAt     DateTime           @default(now()) @map("created_at")
+
+  updatedAt    DateTime @updatedAt @map("updated_at") // Updated when the order is updated
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  storage      Storage? @relation(fields: [storageId], references: [id], onDelete: SetNull)
+  mainOrder    Order?   @relation("MainOrder", fields: [mainOrderId], references: [id], onDelete: Cascade)
+  orderHistory Order[]  @relation("MainOrder")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("orders")
 }

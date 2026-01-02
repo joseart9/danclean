@@ -1,4 +1,4 @@
-import { Role } from "@/generated/prisma/client";
+import { Role } from "@/generated/prisma/browser";
 
 export interface User {
   id: string;
@@ -7,4 +7,6 @@ export interface User {
   name: string;
   lastName: string;
   role: Role;
+  createdAt: Date;
+  updatedAt: Date;
 }

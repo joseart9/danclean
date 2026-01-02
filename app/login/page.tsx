@@ -62,8 +62,11 @@ export default function LoginPage() {
 
       // Success - token is now in cookie, redirect to home
       toast.success("Inicio de sesión exitoso");
-      // Redirect to home page
-      window.location.href = "/";
+
+      // Delay 2 seconds before redirecting to home page
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Error al conectar con el servidor");

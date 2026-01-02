@@ -13,7 +13,7 @@ interface UseMeResponse {
 }
 
 async function fetchMe(): Promise<User> {
-  const response = await apiClient.get<User>("/api/me");
+  const response = await apiClient.get<User>("/me");
   return response.data;
 }
 
