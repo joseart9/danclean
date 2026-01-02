@@ -46,7 +46,9 @@ export const SummaryComponent = () => {
                 Tipo de Orden
               </h2>
               <p className="text-sm">
-                {formData.type === OrderType.IRONING ? "Planchado" : "Limpieza"}
+                {formData.type === OrderType.IRONING
+                  ? "Planchado"
+                  : "Tintoreria"}
               </p>
             </div>
           </>

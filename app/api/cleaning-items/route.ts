@@ -52,9 +52,9 @@ export async function GET() {
 
     return NextResponse.json(cleaningItems, { status: 200 });
   } catch (error) {
-    console.error("Error al obtener los items de limpieza:", error);
+    console.error("Error al obtener los items de tintoreria:", error);
     return NextResponse.json(
-      { error: "Error al obtener los items de limpieza" },
+      { error: "Error al obtener los items de tintoreria" },
       { status: 500 }
     );
   }

@@ -22,6 +22,7 @@ import {
   OrderType,
 } from "@/types/order";
 import type { OrderFormData } from "./order-form-context";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface OrderCompletionDialogProps {
   open: boolean;
@@ -44,6 +45,7 @@ export function OrderCompletionDialog({
   total,
   onOrderCompleted,
 }: OrderCompletionDialogProps) {
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [amountPaid, setAmountPaid] = useState<string>("");
   const [createdOrderNumber, setCreatedOrderNumber] = useState<number | null>(
@@ -127,6 +129,9 @@ export function OrderCompletionDialog({
 
       const response = await apiClient.post("/orders", orderData);
       const order = response.data;
+
+      // Invalidate orders query to refresh the orders table
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
 
       // Show order number dialog
       if (order?.orderNumber) {

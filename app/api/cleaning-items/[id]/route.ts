@@ -28,9 +28,9 @@ export async function GET(
     }
 
     // Handle unexpected errors
-    console.error("Error al obtener el item de limpieza:", error);
+    console.error("Error al obtener el item de tintoreria:", error);
     return NextResponse.json(
-      { error: "Error al obtener el item de limpieza" },
+      { error: "Error al obtener el item de tintoreria" },
       { status: 500 }
     );
   }
@@ -73,9 +73,9 @@ export async function PATCH(
     }
 
     // Handle unexpected errors
-    console.error("Error al actualizar el item de limpieza:", error);
+    console.error("Error al actualizar el item de tintoreria:", error);
     return NextResponse.json(
-      { error: "Error al actualizar el item de limpieza" },
+      { error: "Error al actualizar el item de tintoreria" },
       { status: 500 }
     );
   }
@@ -92,7 +92,7 @@ export async function DELETE(
     await cleaningItemService.deleteCleaningItem(id);
 
     return NextResponse.json(
-      { message: "Item de limpieza eliminado correctamente" },
+      { message: "Item de tintoreria eliminado correctamente" },
       { status: 200 }
     );
   } catch (error) {
@@ -108,9 +108,9 @@ export async function DELETE(
     }
 
     // Handle unexpected errors
-    console.error("Error al eliminar el item de limpieza:", error);
+    console.error("Error al eliminar el item de tintoreria:", error);
     return NextResponse.json(
-      { error: "Error al eliminar el item de limpieza" },
+      { error: "Error al eliminar el item de tintoreria" },
       { status: 500 }
     );
   }

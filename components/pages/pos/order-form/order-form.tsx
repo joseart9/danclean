@@ -204,7 +204,7 @@ export function OrderForm() {
                 onClick={() => setOrderType(OrderType.CLEANING)}
                 className="flex-1"
               >
-                Limpieza
+                Tintoreria
               </Button>
             </div>
           </FieldContent>
@@ -240,7 +240,7 @@ export function OrderForm() {
       {/* CLEANING Items */}
       {formData.type === OrderType.CLEANING && (
         <Field>
-          <FieldLabel required>Items de Limpieza</FieldLabel>
+          <FieldLabel required>Items de Tintoreria</FieldLabel>
           <FieldContent>
             <div className="space-y-3">
               {formData.cleaningItems.length === 0 ? (

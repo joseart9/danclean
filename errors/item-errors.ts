@@ -18,8 +18,8 @@ export class IroningItemNotFoundError extends AppError {
 export class CleaningItemNotFoundError extends AppError {
   constructor(identifier?: string) {
     const message = identifier
-      ? `Item de limpieza no encontrado: ${identifier}`
-      : "Item de limpieza no encontrado";
+      ? `Item de tintoreria no encontrado: ${identifier}`
+      : "Item de tintoreria no encontrado";
     super(message, 404, "CLEANING_ITEM_NOT_FOUND");
   }
 }
