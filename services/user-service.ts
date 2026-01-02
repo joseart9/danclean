@@ -86,6 +86,26 @@ export class UserService {
     return token;
   }
 
+  async getAllUsers() {
+    // Get all users (excluding passwords)
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        lastName: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return users;
+  }
+
   async getUserById(id: string) {
     // Check if user exists
     const user = await prisma.user.findUnique({
@@ -96,6 +116,8 @@ export class UserService {
         name: true,
         lastName: true,
         role: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 

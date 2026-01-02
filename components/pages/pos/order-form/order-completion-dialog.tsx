@@ -209,15 +209,14 @@ export function OrderCompletionDialog({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Finalizar Orden</DialogTitle>
-            <DialogDescription>
-              Revisa los detalles de la orden antes de confirmar
-            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             {/* Total */}
             <Field>
-              <FieldLabel>Total</FieldLabel>
+              <FieldLabel className="text-sm text-muted-foreground">
+                Total
+              </FieldLabel>
               <FieldContent>
                 <p className="text-lg font-bold">{formatCurrency(total)}</p>
               </FieldContent>
@@ -225,7 +224,9 @@ export function OrderCompletionDialog({
 
             {/* Payment Method */}
             <Field>
-              <FieldLabel>Método de Pago</FieldLabel>
+              <FieldLabel className="text-sm text-muted-foreground">
+                Método de Pago
+              </FieldLabel>
               <FieldContent>
                 <p className="text-sm">
                   {formData.paymentMethod
@@ -237,7 +238,9 @@ export function OrderCompletionDialog({
 
             {/* Amount Paid Field - For all payment methods */}
             <Field>
-              <FieldLabel required>Monto Pagado (Puede ser parcial)</FieldLabel>
+              <FieldLabel required className="text-sm text-muted-foreground">
+                Monto Pagado (Puede ser parcial)
+              </FieldLabel>
               <FieldContent>
                 <Input
                   type="number"
@@ -248,9 +251,6 @@ export function OrderCompletionDialog({
                   step="0.01"
                   max={total}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Puede pagar una parte ahora y el resto al recibir la orden
-                </p>
               </FieldContent>
             </Field>
 
@@ -259,7 +259,9 @@ export function OrderCompletionDialog({
               <>
                 {/* Payment Status */}
                 <Field>
-                  <FieldLabel>Estado de Pago</FieldLabel>
+                  <FieldLabel className="text-sm text-muted-foreground">
+                    Estado de Pago
+                  </FieldLabel>
                   <FieldContent>
                     <p className="text-sm font-medium">
                       {isFullPayment
@@ -274,7 +276,9 @@ export function OrderCompletionDialog({
                 {/* Change for Cash (if paying more than total) */}
                 {isCash && change > 0 && (
                   <Field>
-                    <FieldLabel>Cambio</FieldLabel>
+                    <FieldLabel className="text-sm text-muted-foreground">
+                      Cambio
+                    </FieldLabel>
                     <FieldContent>
                       <p className="text-lg font-bold text-green-600">
                         {formatCurrency(change)}
@@ -286,13 +290,12 @@ export function OrderCompletionDialog({
                 {/* Remaining amount for partial payments */}
                 {isPartialPayment && (
                   <Field>
-                    <FieldLabel>Pendiente por Pagar</FieldLabel>
+                    <FieldLabel className="text-sm text-muted-foreground">
+                      Pendiente por Pagar
+                    </FieldLabel>
                     <FieldContent>
                       <p className="text-lg font-bold text-orange-600">
                         {formatCurrency(remaining)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Se cobrará al entregar la orden
                       </p>
                     </FieldContent>
                   </Field>

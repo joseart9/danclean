@@ -9,14 +9,7 @@ import {
   OrderPaymentMethod,
   OrderStatus,
 } from "@/types/order";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-  SheetDescription,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,6 +34,8 @@ import { toast } from "sonner";
 import { EditIcon, TrashIcon, SaveIcon, XIcon } from "lucide-react";
 import { translateOrderStatus } from "@/utils/translate-order-status";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { OrderHistoryTimeline } from "./utils/order-history-timeline";
 
 interface OrderDetailsDrawerProps {
   order: FullOrder | null;
@@ -57,6 +52,8 @@ export function OrderDetailsDrawer({
 }: OrderDetailsDrawerProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [fullOrder, setFullOrder] = useState<FullOrder | null>(null);
+  const [isLoadingOrder, setIsLoadingOrder] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
@@ -68,31 +65,67 @@ export function OrderDetailsDrawer({
     totalPaid: 0,
   });
 
-  // Initialize form data when order changes
+  // Fetch full order details when drawer opens
   useEffect(() => {
-    if (order) {
-      setSelectedCustomer(order.customer);
+    if (open && order) {
+      setIsLoadingOrder(true);
+      apiClient
+        .get<FullOrder>(`/orders/${order.id}`)
+        .then((response) => {
+          setFullOrder(response.data);
+          setSelectedCustomer(response.data.customer);
+          setFormData({
+            customerId: response.data.customer.id,
+            orderStatus: response.data.status,
+            paymentStatus: response.data.paymentStatus,
+            paymentMethod: response.data.paymentMethod,
+            totalPaid: response.data.totalPaid,
+          });
+        })
+        .catch((error) => {
+          console.error("Error fetching order details:", error);
+          toast.error("Error al cargar los detalles de la orden");
+          // Fallback to the order from props
+          setFullOrder(order);
+        })
+        .finally(() => {
+          setIsLoadingOrder(false);
+        });
+    } else if (!open) {
+      // Reset when drawer closes
+      setFullOrder(null);
+      setIsEditing(false);
+    }
+  }, [open, order]);
+
+  // Initialize form data when fullOrder changes
+  useEffect(() => {
+    if (fullOrder) {
+      setSelectedCustomer(fullOrder.customer);
       setFormData({
-        customerId: order.customer.id,
-        orderStatus: order.status,
-        paymentStatus: order.paymentStatus,
-        paymentMethod: order.paymentMethod,
-        totalPaid: order.totalPaid,
+        customerId: fullOrder.customer.id,
+        orderStatus: fullOrder.status,
+        paymentStatus: fullOrder.paymentStatus,
+        paymentMethod: fullOrder.paymentMethod,
+        totalPaid: fullOrder.totalPaid,
       });
       setIsEditing(false);
     }
-  }, [order]);
+  }, [fullOrder]);
 
-  if (!order) return null;
+  // Use fullOrder if available, otherwise fallback to order from props
+  const displayOrder = fullOrder || order;
+
+  if (!displayOrder) return null;
 
   const handleSave = async () => {
-    if (!order) return;
+    if (!displayOrder) return;
 
     setIsSaving(true);
     try {
       // Update order with new customer if changed
       const updatedOrderResponse = await apiClient.patch(
-        `/orders/${order.id}`,
+        `/orders/${displayOrder.id}`,
         {
           customerId: formData.customerId,
           status: formData.orderStatus,
@@ -119,28 +152,31 @@ export function OrderDetailsDrawer({
   };
 
   const handleCancel = () => {
-    if (order) {
-      setSelectedCustomer(order.customer);
+    if (displayOrder) {
+      setSelectedCustomer(displayOrder.customer);
       setFormData({
-        customerId: order.customer.id,
-        orderStatus: order.status,
-        paymentStatus: order.paymentStatus,
-        paymentMethod: order.paymentMethod,
-        totalPaid: order.totalPaid,
+        customerId: displayOrder.customer.id,
+        orderStatus: displayOrder.status,
+        paymentStatus: displayOrder.paymentStatus,
+        paymentMethod: displayOrder.paymentMethod,
+        totalPaid: displayOrder.totalPaid,
       });
     }
     setIsEditing(false);
   };
 
   const handleDelete = async () => {
-    if (!order || !confirm("¿Estás seguro de que deseas eliminar esta orden?"))
+    if (
+      !displayOrder ||
+      !confirm("¿Estás seguro de que deseas eliminar esta orden?")
+    )
       return;
 
     try {
-      await apiClient.delete(`/orders/${order.id}`);
+      await apiClient.delete(`/orders/${displayOrder.id}`);
       toast.success("Orden eliminada correctamente");
       onOpenChange(false);
-      onOrderUpdated?.(order); // Trigger refresh
+      onOrderUpdated?.(displayOrder); // Trigger refresh
     } catch (error: unknown) {
       console.error("Error deleting order:", error);
       const errorMessage =
@@ -162,296 +198,345 @@ export function OrderDetailsDrawer({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-lg p-4">
-        <div className="flex flex-col gap-6 py-4">
-          {/* Información de la Orden - Order Number */}
-          <div className="flex flex-col gap-3">
-            <h3 className="text-lg font-semibold">Información de la Orden</h3>
-            <div className="space-y-3">
-              <Field>
-                <FieldLabel className="text-sm text-muted-foreground">
-                  Número de Orden
-                </FieldLabel>
-                <FieldContent>
-                  <p className="font-medium text-lg">{order.orderNumber}</p>
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel className="text-sm text-muted-foreground">
-                  Servicio
-                </FieldLabel>
-                <FieldContent>
-                  <p className="font-medium">
-                    {order.type === OrderType.IRONING
-                      ? "PLANCHA"
-                      : "TINTORERIA"}
-                  </p>
-                </FieldContent>
-              </Field>
+        <Tabs defaultValue="resumen" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="resumen">Resumen</TabsTrigger>
+            <TabsTrigger value="historial">Historial</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="resumen" className="mt-0">
+            <div className="flex flex-col gap-6 py-4">
+              {/* Información de la Orden - Order Number */}
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg font-semibold">
+                  Información de la Orden
+                </h3>
+                <div className="space-y-3">
+                  <Field>
+                    <FieldLabel className="text-sm text-muted-foreground">
+                      Número de Orden
+                    </FieldLabel>
+                    <FieldContent>
+                      <p className="font-medium text-lg">
+                        {displayOrder.orderNumber}
+                      </p>
+                    </FieldContent>
+                  </Field>
+                  <Field>
+                    <FieldLabel className="text-sm text-muted-foreground">
+                      Servicio
+                    </FieldLabel>
+                    <FieldContent>
+                      <p className="font-medium">
+                        {displayOrder.type === OrderType.IRONING
+                          ? "PLANCHA"
+                          : "TINTORERIA"}
+                      </p>
+                    </FieldContent>
+                  </Field>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Información del Cliente */}
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg font-semibold">Cliente</h3>
+                <Field>
+                  <FieldContent>
+                    {isEditing ? (
+                      <CustomerCombobox
+                        value={selectedCustomer}
+                        onValueChange={handleCustomerChange}
+                      />
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="font-medium">
+                          {displayOrder.customer.name}{" "}
+                          {displayOrder.customer.lastName}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {displayOrder.customer.phone}
+                        </p>
+                        {displayOrder.customer.address && (
+                          <p className="text-sm text-muted-foreground">
+                            Dirección: {displayOrder.customer.address}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </FieldContent>
+                </Field>
+              </div>
+
+              <Separator />
+
+              {/* Estado de la Orden */}
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg font-semibold">Estado de la Orden</h3>
+                <div className="space-y-3">
+                  <Field>
+                    <FieldLabel className="text-sm text-muted-foreground">
+                      Estatus
+                    </FieldLabel>
+                    <FieldContent>
+                      {isEditing ? (
+                        <Select
+                          value={formData.orderStatus}
+                          onValueChange={(value) =>
+                            setFormData({
+                              ...formData,
+                              orderStatus: value as OrderStatus,
+                            })
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(orderStatusLabels).map(
+                              ([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                  {label}
+                                </SelectItem>
+                              )
+                            )}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge
+                          variant={
+                            displayOrder.status === OrderStatus.DELIVERED
+                              ? "success"
+                              : displayOrder.status === OrderStatus.COMPLETED
+                              ? "warning"
+                              : displayOrder.status === OrderStatus.CANCELLED ||
+                                displayOrder.status === OrderStatus.DAMAGED ||
+                                displayOrder.status === OrderStatus.LOST ||
+                                displayOrder.status === OrderStatus.PENDING
+                              ? "destructive"
+                              : "secondary"
+                          }
+                        >
+                          {translateOrderStatus(displayOrder.status)}
+                        </Badge>
+                      )}
+                    </FieldContent>
+                  </Field>
+                  {displayOrder.storage && (
+                    <Field>
+                      <FieldLabel className="text-sm text-muted-foreground">
+                        Almacén
+                      </FieldLabel>
+                      <FieldContent>
+                        <p className="font-medium">
+                          Almacén #{displayOrder.storage.storageNumber}
+                        </p>
+                      </FieldContent>
+                    </Field>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Items - Display only */}
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg font-semibold">Piezas</h3>
+                <OrderItemsDisplay order={displayOrder} />
+              </div>
+
+              <Separator />
+
+              {/* Información de Pago */}
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg font-semibold">Información de Pago</h3>
+                <div className="space-y-3">
+                  <Field>
+                    <FieldLabel className="text-sm text-muted-foreground">
+                      Método de Pago
+                    </FieldLabel>
+                    <FieldContent>
+                      {isEditing ? (
+                        <Select
+                          value={formData.paymentMethod}
+                          onValueChange={(value) =>
+                            setFormData({
+                              ...formData,
+                              paymentMethod: value as OrderPaymentMethod,
+                            })
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(paymentMethodLabels).map(
+                              ([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                  {label}
+                                </SelectItem>
+                              )
+                            )}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <p className="font-medium">
+                          {paymentMethodLabels[displayOrder.paymentMethod]}
+                        </p>
+                      )}
+                    </FieldContent>
+                  </Field>
+                  <Field>
+                    <FieldLabel className="text-sm text-muted-foreground">
+                      Estado de Pago
+                    </FieldLabel>
+                    <FieldContent>
+                      {isEditing ? (
+                        <Select
+                          value={formData.paymentStatus}
+                          onValueChange={(value) =>
+                            setFormData({
+                              ...formData,
+                              paymentStatus: value as OrderPaymentStatus,
+                            })
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(paymentStatusLabels).map(
+                              ([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                  {label}
+                                </SelectItem>
+                              )
+                            )}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <p className="font-medium">
+                          {paymentStatusLabels[displayOrder.paymentStatus]}
+                        </p>
+                      )}
+                    </FieldContent>
+                  </Field>
+                  <Field>
+                    <FieldLabel className="text-sm text-muted-foreground">
+                      Total
+                    </FieldLabel>
+                    <FieldContent>
+                      <p className="text-lg font-bold">
+                        {formatCurrency(displayOrder.total)}
+                      </p>
+                    </FieldContent>
+                  </Field>
+                  <Field>
+                    <FieldLabel className="text-sm text-muted-foreground">
+                      Total Pagado
+                    </FieldLabel>
+                    <FieldContent>
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.totalPaid}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              totalPaid: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="0"
+                        />
+                      ) : (
+                        <p className="text-lg font-bold">
+                          {formatCurrency(displayOrder.totalPaid)}
+                        </p>
+                      )}
+                    </FieldContent>
+                  </Field>
+                  {formData.totalPaid < displayOrder.total && (
+                    <Field>
+                      <FieldLabel className="text-sm text-muted-foreground">
+                        Pendiente
+                      </FieldLabel>
+                      <FieldContent>
+                        <p className="text-lg font-bold text-orange-600">
+                          {formatCurrency(
+                            displayOrder.total - formData.totalPaid
+                          )}
+                        </p>
+                      </FieldContent>
+                    </Field>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Metadatos - Display only */}
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg font-semibold">Metadatos</h3>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Fecha de Creación
+                    </p>
+                    <p className="font-medium">
+                      {formatDate(displayOrder.createdAt)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Última Actualización
+                    </p>
+                    <p className="font-medium">
+                      {formatDate(displayOrder.updatedAt)}
+                    </p>
+                  </div>
+                  {displayOrder.user && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Creado por
+                      </p>
+                      <p className="font-medium">
+                        {displayOrder.user.name} {displayOrder.user.lastName}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          </TabsContent>
 
-          <Separator />
-
-          {/* Información del Cliente */}
-          <div className="flex flex-col gap-3">
-            <h3 className="text-lg font-semibold">Cliente</h3>
-            <Field>
-              <FieldContent>
-                {isEditing ? (
-                  <CustomerCombobox
-                    value={selectedCustomer}
-                    onValueChange={handleCustomerChange}
+          <TabsContent value="historial" className="mt-0">
+            <div className="flex flex-col gap-6 py-4">
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg font-semibold">
+                  Historial de Modificaciones
+                </h3>
+                {isLoadingOrder ? (
+                  <p className="text-sm text-muted-foreground">
+                    Cargando historial...
+                  </p>
+                ) : displayOrder.orderHistory &&
+                  displayOrder.orderHistory.length > 0 ? (
+                  <OrderHistoryTimeline
+                    orderHistory={displayOrder.orderHistory}
+                    currentOrder={displayOrder}
                   />
                 ) : (
-                  <div className="space-y-2">
-                    <p className="font-medium">
-                      {order.customer.name} {order.customer.lastName}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {order.customer.phone}
-                    </p>
-                    {order.customer.address && (
-                      <p className="text-sm text-muted-foreground">
-                        Dirección: {order.customer.address}
-                      </p>
-                    )}
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    No hay historial de modificaciones para esta orden.
+                  </p>
                 )}
-              </FieldContent>
-            </Field>
-          </div>
-
-          <Separator />
-
-          {/* Estado de la Orden */}
-          <div className="flex flex-col gap-3">
-            <h3 className="text-lg font-semibold">Estado de la Orden</h3>
-            <div className="space-y-3">
-              <Field>
-                <FieldLabel className="text-sm text-muted-foreground">
-                  Estatus
-                </FieldLabel>
-                <FieldContent>
-                  {isEditing ? (
-                    <Select
-                      value={formData.orderStatus}
-                      onValueChange={(value) =>
-                        setFormData({
-                          ...formData,
-                          orderStatus: value as OrderStatus,
-                        })
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(orderStatusLabels).map(
-                          ([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Badge
-                      variant={
-                        order.status === OrderStatus.COMPLETED
-                          ? "success"
-                          : order.status === OrderStatus.CANCELLED ||
-                            order.status === OrderStatus.DAMAGED ||
-                            order.status === OrderStatus.LOST ||
-                            order.status === OrderStatus.PENDING
-                          ? "destructive"
-                          : "secondary"
-                      }
-                    >
-                      {translateOrderStatus(order.status)}
-                    </Badge>
-                  )}
-                </FieldContent>
-              </Field>
-              {order.storage && (
-                <Field>
-                  <FieldLabel className="text-sm text-muted-foreground">
-                    Almacén
-                  </FieldLabel>
-                  <FieldContent>
-                    <p className="font-medium">
-                      Almacén #{order.storage.storageNumber}
-                    </p>
-                  </FieldContent>
-                </Field>
-              )}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Items - Display only */}
-          <div className="flex flex-col gap-3">
-            <h3 className="text-lg font-semibold">Piezas</h3>
-            <OrderItemsDisplay order={order} />
-          </div>
-
-          <Separator />
-
-          {/* Información de Pago */}
-          <div className="flex flex-col gap-3">
-            <h3 className="text-lg font-semibold">Información de Pago</h3>
-            <div className="space-y-3">
-              <Field>
-                <FieldLabel className="text-sm text-muted-foreground">
-                  Método de Pago
-                </FieldLabel>
-                <FieldContent>
-                  {isEditing ? (
-                    <Select
-                      value={formData.paymentMethod}
-                      onValueChange={(value) =>
-                        setFormData({
-                          ...formData,
-                          paymentMethod: value as OrderPaymentMethod,
-                        })
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(paymentMethodLabels).map(
-                          ([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <p className="font-medium">
-                      {paymentMethodLabels[order.paymentMethod]}
-                    </p>
-                  )}
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel className="text-sm text-muted-foreground">
-                  Estado de Pago
-                </FieldLabel>
-                <FieldContent>
-                  {isEditing ? (
-                    <Select
-                      value={formData.paymentStatus}
-                      onValueChange={(value) =>
-                        setFormData({
-                          ...formData,
-                          paymentStatus: value as OrderPaymentStatus,
-                        })
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(paymentStatusLabels).map(
-                          ([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <p className="font-medium">
-                      {paymentStatusLabels[order.paymentStatus]}
-                    </p>
-                  )}
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel className="text-sm text-muted-foreground">
-                  Total
-                </FieldLabel>
-                <FieldContent>
-                  <p className="text-lg font-bold">
-                    {formatCurrency(order.total)}
-                  </p>
-                </FieldContent>
-              </Field>
-              <Field>
-                <FieldLabel className="text-sm text-muted-foreground">
-                  Total Pagado
-                </FieldLabel>
-                <FieldContent>
-                  {isEditing ? (
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.totalPaid}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          totalPaid: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      placeholder="0"
-                    />
-                  ) : (
-                    <p className="text-lg font-bold">
-                      {formatCurrency(order.totalPaid)}
-                    </p>
-                  )}
-                </FieldContent>
-              </Field>
-              {formData.totalPaid < order.total && (
-                <Field>
-                  <FieldLabel className="text-sm text-muted-foreground">
-                    Pendiente
-                  </FieldLabel>
-                  <FieldContent>
-                    <p className="text-lg font-bold text-orange-600">
-                      {formatCurrency(order.total - formData.totalPaid)}
-                    </p>
-                  </FieldContent>
-                </Field>
-              )}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Metadatos - Display only */}
-          <div className="flex flex-col gap-3">
-            <h3 className="text-lg font-semibold">Metadatos</h3>
-            <div className="space-y-2">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Fecha de Creación
-                </p>
-                <p className="font-medium">{formatDate(order.createdAt)}</p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Última Actualización
-                </p>
-                <p className="font-medium">{formatDate(order.updatedAt)}</p>
-              </div>
-              {order.user && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Creado por</p>
-                  <p className="font-medium">
-                    {order.user.name} {order.user.lastName}
-                  </p>
-                </div>
-              )}
             </div>
-          </div>
-        </div>
+          </TabsContent>
+        </Tabs>
 
         <SheetFooter className="flex flex-row gap-2 sm:justify-end mt-4">
           {isEditing ? (

@@ -6,17 +6,22 @@ import { SkeletonDataTable } from "@/components/ui/data-table-skeleton";
 import { columns } from "./columns";
 import type { FullOrder } from "@/types/order";
 import { OrderDetailsDrawer } from "./order-details-drawer";
+import { Switch } from "@/components/ui/switch";
 
 interface OrdersTableProps {
   orders: FullOrder[];
   isLoading?: boolean;
   onOrdersChange?: () => void;
+  includeDelivered?: boolean;
+  onIncludeDeliveredChange?: (include: boolean) => void;
 }
 
 export function OrdersTable({
   orders,
   isLoading,
   onOrdersChange,
+  includeDelivered = false,
+  onIncludeDeliveredChange,
 }: OrdersTableProps) {
   const [selectedOrder, setSelectedOrder] = useState<FullOrder | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -51,6 +56,17 @@ export function OrdersTable({
         enableSortingRemoval={true}
         searchOnNamePlaceholder="Buscar por cliente"
         onRowClick={handleRowClick}
+        sideButtons={
+          <>
+            {onIncludeDeliveredChange && (
+              <Switch
+                checked={includeDelivered}
+                onChange={(e) => onIncludeDeliveredChange(e.target.checked)}
+                label="Incluir Entregados"
+              />
+            )}
+          </>
+        }
       />
       <OrderDetailsDrawer
         order={selectedOrder}

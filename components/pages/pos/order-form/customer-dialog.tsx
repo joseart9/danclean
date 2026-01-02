@@ -104,18 +104,20 @@ export function CustomerDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Agregar Cliente</DialogTitle>
-          <DialogDescription>
-            Completa la información para crear un nuevo cliente
-          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Field>
-            <FieldLabel htmlFor="name">Nombre *</FieldLabel>
+            <FieldLabel
+              htmlFor="name"
+              required
+              className="text-sm text-muted-foreground"
+            >
+              Nombre
+            </FieldLabel>
             <FieldContent>
               <Input
                 id="name"
-                placeholder="Juan"
                 aria-invalid={errors.name ? "true" : "false"}
                 {...register("name")}
               />
@@ -124,11 +126,16 @@ export function CustomerDialog({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="lastName">Apellido *</FieldLabel>
+            <FieldLabel
+              htmlFor="lastName"
+              required
+              className="text-sm text-muted-foreground"
+            >
+              Apellido
+            </FieldLabel>
             <FieldContent>
               <Input
                 id="lastName"
-                placeholder="Pérez"
                 aria-invalid={errors.lastName ? "true" : "false"}
                 {...register("lastName")}
               />
@@ -137,11 +144,16 @@ export function CustomerDialog({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="phone">Teléfono *</FieldLabel>
+            <FieldLabel
+              htmlFor="phone"
+              required
+              className="text-sm text-muted-foreground"
+            >
+              Teléfono
+            </FieldLabel>
             <FieldContent>
               <Input
                 id="phone"
-                placeholder="+1234567890"
                 aria-invalid={errors.phone ? "true" : "false"}
                 {...register("phone")}
               />
@@ -150,11 +162,15 @@ export function CustomerDialog({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="address">Dirección</FieldLabel>
+            <FieldLabel
+              htmlFor="address"
+              className="text-sm text-muted-foreground"
+            >
+              Dirección
+            </FieldLabel>
             <FieldContent>
               <Input
                 id="address"
-                placeholder="Calle Principal 123"
                 aria-invalid={errors.address ? "true" : "false"}
                 {...register("address")}
               />

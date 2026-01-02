@@ -1,15 +1,26 @@
-import { Home, List, ShoppingCart, Truck, Users } from "lucide-react";
+import {
+  Home,
+  List,
+  ShoppingCart,
+  Truck,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import type { Role } from "@/generated/prisma/browser";
 
-const ROLES = {
-  ADMIN: "ADMIN",
-  USER: "USER",
-} as const;
+export type Route = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  permissions?: Role[];
+};
 
-export const ROUTES = [
+export const ROUTES: Route[] = [
   {
     href: "/",
     label: "Dashboard",
     icon: Home,
+    permissions: ["ADMIN"],
   },
   {
     href: "/pos",
@@ -30,6 +41,6 @@ export const ROUTES = [
     href: "/customers",
     label: "Clientes",
     icon: Users,
-    permissions: [ROLES.ADMIN],
+    permissions: ["ADMIN"],
   },
 ];

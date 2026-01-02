@@ -102,8 +102,10 @@ export const columns: ColumnDef<FullOrder>[] = [
       return (
         <Badge
           variant={
-            status === OrderStatus.COMPLETED
+            status === OrderStatus.DELIVERED
               ? "success"
+              : status === OrderStatus.COMPLETED
+              ? "warning"
               : status === OrderStatus.CANCELLED ||
                 status === OrderStatus.DAMAGED ||
                 status === OrderStatus.LOST ||

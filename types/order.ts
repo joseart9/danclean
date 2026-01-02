@@ -74,11 +74,15 @@ export interface Order {
   updatedAt: Date;
 }
 
+export interface OrderWithUser extends Order {
+  user: User;
+}
+
 export interface FullOrder extends Order {
   customer: Customer;
   storage: Storage | null;
   mainOrder: Order | null;
-  orderHistory: Order[];
+  orderHistory: OrderWithUser[];
   items: IroningItem | CleaningItem[];
   user: User;
 }

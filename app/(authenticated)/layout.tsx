@@ -4,8 +4,6 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 
-import { useMe } from "@/hooks/useMe";
-
 export default function AuthenticatedLayout({
   children,
 }: {

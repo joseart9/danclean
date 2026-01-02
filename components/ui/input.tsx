@@ -9,7 +9,7 @@ function Input({
   ...props
 }: React.ComponentProps<"input"> & { leftIcon?: React.ReactNode }) {
   return (
-    <div className="relative">
+    <div className="relative w-full">
       {leftIcon && (
         <div className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
           {leftIcon}

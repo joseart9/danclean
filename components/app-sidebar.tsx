@@ -23,8 +23,21 @@ import { useMe } from "@/hooks/useMe";
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { data: user } = useMe();
+
+  // Filter routes based on user role and route permissions
+  const filteredRoutes = ROUTES.filter((route) => {
+    // If route has no permissions, it's accessible to everyone
+    if (!route.permissions) return true;
+
+    // If user is not loaded, don't show protected routes
+    if (!user) return false;
+
+    // Check if user's role is in the allowed permissions
+    return route.permissions.includes(user.role);
+  });
+
   // Transform ROUTES to match NavMain's expected format
-  const navMainItems = ROUTES.map((route) => ({
+  const navMainItems = filteredRoutes.map((route) => ({
     title: route.label,
     url: route.href,
     icon: route.icon,

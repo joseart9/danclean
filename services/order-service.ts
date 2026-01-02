@@ -39,6 +39,131 @@ const CLEANING_PRICES: Record<string, number> = {
 
 export class OrderService {
   /**
+   * Helper method to get the latest version of an order
+   * Given an order ID, finds the original order and returns the latest version
+   */
+  private async getLatestOrderVersion(orderId: string) {
+    // First, find the order to determine if it's the original or an update
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+    });
+
+    if (!order) {
+      throw new OrderNotFoundError(orderId);
+    }
+
+    // Determine the original order ID
+    const originalOrderId = order.mainOrderId || order.id;
+
+    // Find all orders that are part of this order's history
+    // (original order + all updates)
+    const allVersions = await prisma.order.findMany({
+      where: {
+        OR: [{ id: originalOrderId }, { mainOrderId: originalOrderId }],
+      },
+      include: {
+        customer: true,
+        orderItems: true,
+        storage: true,
+        mainOrder: true,
+        orderHistory: {
+          include: {
+            user: {
+              omit: {
+                password: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        user: {
+          omit: {
+            password: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    // Return the latest version (first one after sorting by createdAt desc)
+    return allVersions[0];
+  }
+
+  /**
+   * Helper method to get the latest version of orders by order number
+   * Returns only the latest version for each unique order number
+   */
+  private async getLatestOrderVersionsByOrderNumbers(orderNumbers: number[]) {
+    if (orderNumbers.length === 0) return [];
+
+    // Get all orders with these order numbers
+    const allOrders = await prisma.order.findMany({
+      where: {
+        orderNumber: { in: orderNumbers },
+      },
+      include: {
+        customer: true,
+        orderItems: true,
+        storage: true,
+        mainOrder: true,
+        orderHistory: {
+          include: {
+            user: {
+              omit: {
+                password: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        user: {
+          omit: {
+            password: true,
+          },
+        },
+      },
+    });
+
+    // For each order number, find the original order (mainOrderId = null)
+    // Then find all versions (original + updates) and get the latest
+    const latestVersions: typeof allOrders = [];
+
+    for (const orderNumber of orderNumbers) {
+      // Find the original order for this order number
+      const originalOrder = allOrders.find(
+        (o) => o.orderNumber === orderNumber && o.mainOrderId === null
+      );
+
+      if (!originalOrder) {
+        // If no original found, skip this order number
+        continue;
+      }
+
+      // Find all versions of this order (original + all updates)
+      const allVersions = allOrders.filter(
+        (o) =>
+          o.orderNumber === orderNumber &&
+          (o.id === originalOrder.id || o.mainOrderId === originalOrder.id)
+      );
+
+      // Get the latest version (highest createdAt)
+      const latestVersion = allVersions.reduce((latest, current) => {
+        return current.createdAt > latest.createdAt ? current : latest;
+      });
+
+      latestVersions.push(latestVersion);
+    }
+
+    return latestVersions;
+  }
+
+  /**
    * Helper method to enrich orders with their actual items (ironing or cleaning)
    */
   private async enrichOrdersWithItems(
@@ -176,6 +301,7 @@ export class OrderService {
           storageId: null,
           userId: userId,
           mainOrderId: data.mainOrderId,
+          isMainOrder: !data.mainOrderId, // Main order only if no mainOrderId
         },
       });
 
@@ -223,6 +349,7 @@ export class OrderService {
           orderNumber: 0, // Temporary placeholder
           userId: userId,
           mainOrderId: data.mainOrderId,
+          isMainOrder: !data.mainOrderId, // Main order only if no mainOrderId
           storageId: null, // Will be set after allocation
         },
       });
@@ -276,35 +403,50 @@ export class OrderService {
   }
 
   async getOrderById(id: string) {
-    // Check if order exists
+    // First, find the order to determine if it's the main order or an update
     const order = await prisma.order.findUnique({
       where: { id },
-      include: {
-        customer: true,
-        orderItems: true,
-        mainOrder: true,
-        orderHistory: true,
-      },
     });
 
     if (!order) {
       throw new OrderNotFoundError(id);
     }
 
-    // Enrich with actual items
-    const enrichedOrders = await this.enrichOrdersWithItems([order]);
-    return enrichedOrders[0];
-  }
+    // Determine the original order ID (the one that all updates point to)
+    const originalOrderId = order.mainOrderId || order.id;
 
-  async getAllOrders() {
-    // Get all orders
-    const orders = await prisma.order.findMany({
+    // Find the main order (isMainOrder = true) for this order's history
+    const mainOrder = await prisma.order.findFirst({
+      where: {
+        OR: [
+          { id: originalOrderId, isMainOrder: true },
+          { mainOrderId: originalOrderId, isMainOrder: true },
+        ],
+      },
       include: {
         customer: true,
         orderItems: true,
         storage: true,
         mainOrder: true,
-        orderHistory: true,
+        user: {
+          omit: {
+            password: true,
+          },
+        },
+      },
+    });
+
+    if (!mainOrder) {
+      throw new OrderNotFoundError(id);
+    }
+
+    // Fetch ALL orders in the history chain (original + all updates)
+    // This includes all orders where mainOrderId = originalOrderId OR id = originalOrderId
+    const allHistoryOrders = await prisma.order.findMany({
+      where: {
+        OR: [{ id: originalOrderId }, { mainOrderId: originalOrderId }],
+      },
+      include: {
         user: {
           omit: {
             password: true,
@@ -316,22 +458,35 @@ export class OrderService {
       },
     });
 
-    // Enrich with actual items
-    return await this.enrichOrdersWithItems(orders);
-  }
+    // Filter out the main order from history (we already have it)
+    const orderHistory = allHistoryOrders.filter((h) => h.id !== mainOrder.id);
 
-  async getOrdersByCustomerId(customerId: string, orderStatus?: OrderStatus) {
-    // Build where clause
-    const where: { customerId: string; status?: OrderStatus } = {
-      customerId,
+    // Attach the history to the main order
+    const mainOrderWithHistory = {
+      ...mainOrder,
+      orderHistory,
     };
 
-    // Add status filter if provided
-    if (orderStatus) {
-      where.status = orderStatus;
+    // Enrich with actual items
+    const enrichedOrders = await this.enrichOrdersWithItems([
+      mainOrderWithHistory,
+    ]);
+    return enrichedOrders[0];
+  }
+
+  async getAllOrders(includeDelivered: boolean = false) {
+    // Get all main orders (isMainOrder = true)
+    const where: {
+      isMainOrder: boolean;
+      status?: { not: OrderStatus };
+    } = {
+      isMainOrder: true,
+    };
+
+    if (!includeDelivered) {
+      where.status = { not: OrderStatus.DELIVERED };
     }
 
-    // Get all orders for a specific customer
     const orders = await prisma.order.findMany({
       where,
       include: {
@@ -355,27 +510,146 @@ export class OrderService {
     return await this.enrichOrdersWithItems(orders);
   }
 
-  async updateOrder(id: string, data: UpdateOrderInput) {
-    // Check if order exists
-    const order = await prisma.order.findUnique({
-      where: { id },
+  async getOrdersByCustomerId(
+    customerId: string,
+    orderStatus?: OrderStatus,
+    excludeDelivered: boolean = false
+  ) {
+    // Build where clause
+    const where: {
+      customerId: string;
+      isMainOrder: boolean;
+      status?: OrderStatus | { not: OrderStatus };
+    } = {
+      customerId,
+      isMainOrder: true,
+    };
+
+    // Apply status filters
+    if (excludeDelivered) {
+      where.status = { not: OrderStatus.DELIVERED };
+    } else if (orderStatus) {
+      where.status = orderStatus;
+    }
+
+    const orders = await prisma.order.findMany({
+      where,
+      include: {
+        customer: true,
+        orderItems: true,
+        storage: true,
+        mainOrder: true,
+        orderHistory: {
+          include: {
+            user: {
+              omit: {
+                password: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        user: {
+          omit: {
+            password: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    // Enrich with actual items
+    return await this.enrichOrdersWithItems(orders);
+  }
+
+  async getOrderByOrderNumber(
+    orderNumber: number,
+    excludeDelivered: boolean = true
+  ) {
+    // Get the main order (isMainOrder = true) for this order number
+    const where: {
+      orderNumber: number;
+      isMainOrder: boolean;
+      status?: { not: OrderStatus };
+    } = {
+      orderNumber,
+      isMainOrder: true,
+    };
+
+    if (excludeDelivered) {
+      where.status = { not: OrderStatus.DELIVERED };
+    }
+
+    const order = await prisma.order.findFirst({
+      where,
+      include: {
+        customer: true,
+        orderItems: true,
+        storage: true,
+        mainOrder: true,
+        orderHistory: {
+          include: {
+            user: {
+              omit: {
+                password: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        user: {
+          omit: {
+            password: true,
+          },
+        },
+      },
     });
 
     if (!order) {
-      throw new OrderNotFoundError(id);
+      throw new OrderNotFoundError(`número de orden ${orderNumber}`);
     }
+
+    // Enrich with actual items
+    const enrichedOrders = await this.enrichOrdersWithItems([order]);
+    return enrichedOrders[0];
+  }
+
+  async updateOrder(id: string, data: UpdateOrderInput) {
+    // Get the latest version of the order
+    const latestOrder = await this.getLatestOrderVersion(id);
 
     // For updates, we create a new order with the updated data and link it to the main order
     // This maintains order history
-    if (data.type && data.type !== order.type) {
+    if (data.type && data.type !== latestOrder.type) {
       throw new Error(
         "Cannot change order type. Please create a new order instead."
       );
     }
 
-    const newStatus = data.status ?? order.status;
+    // Determine the original order ID (the one without mainOrderId)
+    const originalOrderId = latestOrder.mainOrderId || latestOrder.id;
+
+    // Get the original order to get its orderItems
+    const originalOrder = await prisma.order.findUnique({
+      where: { id: originalOrderId },
+      include: {
+        orderItems: true,
+      },
+    });
+
+    if (!originalOrder) {
+      throw new OrderNotFoundError(originalOrderId);
+    }
+
+    const newStatus = data.status ?? latestOrder.status;
     const wasReleased = storageService.isOrderReleased(
-      order.status as OrderStatus
+      latestOrder.status as OrderStatus
     );
     const willBeReleased = storageService.isOrderReleased(
       newStatus as OrderStatus
@@ -384,29 +658,91 @@ export class OrderService {
     // If order is being released (status changed to DELIVERED)
     if (!wasReleased && willBeReleased) {
       // Release the order (free capacity and order number)
-      await storageService.releaseOrder(id);
+      // Use the original order ID for release
+      await storageService.releaseOrder(originalOrderId);
     }
 
-    // Update the existing order
-    const updatedOrder = await prisma.order.update({
-      where: { id },
-      data: {
-        customerId: data.customerId ?? order.customerId,
-        paymentStatus: data.paymentStatus ?? order.paymentStatus,
-        paymentMethod: data.paymentMethod ?? order.paymentMethod,
-        status: newStatus,
-        total: data.total ?? order.total,
-        totalPaid: data.totalPaid ?? order.totalPaid,
+    // Get user ID for the new order
+    const userId = await getUserId();
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    // Set the old main order's isMainOrder to false
+    await prisma.order.updateMany({
+      where: {
+        OR: [
+          { id: originalOrderId, isMainOrder: true },
+          { mainOrderId: originalOrderId, isMainOrder: true },
+        ],
       },
+      data: {
+        isMainOrder: false,
+      },
+    });
+
+    // Create a new order record with updated data
+    // Keep the same orderNumber, total, and items
+    const newOrder = await prisma.order.create({
+      data: {
+        type: latestOrder.type,
+        customerId: data.customerId ?? latestOrder.customerId,
+        paymentStatus: data.paymentStatus ?? latestOrder.paymentStatus,
+        paymentMethod: data.paymentMethod ?? latestOrder.paymentMethod,
+        status: newStatus,
+        total: latestOrder.total, // Keep the same total
+        totalPaid: data.totalPaid ?? latestOrder.totalPaid,
+        orderNumber: latestOrder.orderNumber, // Keep the same order number
+        storageId: latestOrder.storageId, // Keep the same storage
+        mainOrderId: originalOrderId, // Link to the original order
+        isMainOrder: true, // This is now the main order
+        userId: userId,
+      },
+    });
+
+    // Link the existing orderItems to the new order (don't create new items)
+    await Promise.all(
+      originalOrder.orderItems.map((orderItem) =>
+        prisma.orderItem.create({
+          data: {
+            type: orderItem.type,
+            orderId: newOrder.id,
+            itemId: orderItem.itemId, // Use the same item IDs
+          },
+        })
+      )
+    );
+
+    // Return the new order with relations
+    const updatedOrder = await prisma.order.findUnique({
+      where: { id: newOrder.id },
       include: {
         customer: true,
         orderItems: true,
         storage: true,
+        mainOrder: true,
+        orderHistory: {
+          include: {
+            user: {
+              omit: {
+                password: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        user: {
+          omit: {
+            password: true,
+          },
+        },
       },
     });
 
     // Enrich with actual items
-    const enrichedOrders = await this.enrichOrdersWithItems([updatedOrder]);
+    const enrichedOrders = await this.enrichOrdersWithItems([updatedOrder!]);
     return enrichedOrders[0];
   }
 

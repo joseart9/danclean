@@ -39,11 +39,13 @@ enum OrderPaymentMethod {
 
 enum OrderStatus {
   PENDING
+  IN_PROGRESS
   COMPLETED
   CANCELLED
   DAMAGED
   LOST
   DELIVERED
+  PICKED_UP
 }
 
 model User {
@@ -152,6 +154,7 @@ model Order {
   orderNumber   Int                @map("order_number")
   storageId     String?            @map("storage_id")
   mainOrderId   String?            @map("main_order_id")
+  isMainOrder   Boolean            @default(true) @map("is_main_order")
   userId        String             @map("user_id")
   createdAt     DateTime           @default(now()) @map("created_at")
 

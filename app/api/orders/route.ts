@@ -48,8 +48,16 @@ export async function POST(request: Request) {
 
     // Handle unexpected errors
     console.error("Unexpected error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Error desconocido";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error("Error details:", { errorMessage, errorStack, error });
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      {
+        error: "Error interno del servidor",
+        details:
+          process.env.NODE_ENV === "development" ? errorMessage : undefined,
+      },
       { status: 500 }
     );
   }
@@ -61,6 +69,7 @@ export async function GET(request: Request) {
     const customerId =
       searchParams.get("customer_id") || searchParams.get("customerId");
     const orderStatus = searchParams.get("order_status");
+    const orderNumber = searchParams.get("order_number");
 
     // Validate order_status if provided
     let status: OrderStatus | undefined;
@@ -80,17 +89,40 @@ export async function GET(request: Request) {
       status = orderStatus as OrderStatus;
     }
 
+    // If orderNumber is provided, get order by order number
+    if (orderNumber) {
+      const orderNumberInt = parseInt(orderNumber, 10);
+      if (isNaN(orderNumberInt)) {
+        return NextResponse.json(
+          { error: "order_number debe ser un número válido" },
+          { status: 400 }
+        );
+      }
+      // For delivery search, exclude delivered orders (default behavior)
+      const excludeDelivered =
+        searchParams.get("exclude_delivered") !== "false";
+      const order = await orderService.getOrderByOrderNumber(
+        orderNumberInt,
+        excludeDelivered
+      );
+      return NextResponse.json(order, { status: 200 });
+    }
+
     // If customerId is provided, get orders by customer id with optional status filter
     if (customerId) {
+      // For delivery search, exclude delivered orders
+      const excludeDelivered = searchParams.get("exclude_delivered") === "true";
       const orders = await orderService.getOrdersByCustomerId(
         customerId,
-        status
+        status,
+        excludeDelivered
       );
       return NextResponse.json(orders, { status: 200 });
     }
 
     // Otherwise, get all orders
-    const orders = await orderService.getAllOrders();
+    const includeDelivered = searchParams.get("include_delivered") === "true";
+    const orders = await orderService.getAllOrders(includeDelivered);
 
     return NextResponse.json(orders, { status: 200 });
   } catch (error) {
