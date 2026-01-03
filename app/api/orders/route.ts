@@ -15,6 +15,7 @@ export async function POST(request: Request) {
       customerId: data.customer_id || data.customerId,
       paymentMethod: data.payment_method || data.paymentMethod,
       totalPaid: data.total_paid ?? data.totalPaid ?? 0,
+      paid: data.paid ?? data.totalPaid ?? 0,
     };
     delete mappedData.customer_id;
     delete mappedData.payment_method;

@@ -6,8 +6,10 @@ import { OrderType, OrderPaymentMethod } from "@/types/order";
 import { calculateIroningTotal, calculateCleaningTotal } from "@/utils";
 
 export interface CleaningItem {
+  id: string;
   item_name: string;
   quantity: number;
+  price: number;
 }
 
 export interface OrderFormData {
@@ -23,9 +25,9 @@ interface OrderFormContextType {
   setCustomer: (customer: Customer | null) => void;
   setOrderType: (type: OrderType | null) => void;
   setIroningQuantity: (quantity: number | null) => void;
-  addCleaningItem: (item: CleaningItem) => void;
-  removeCleaningItem: (index: number) => void;
-  updateCleaningItem: (index: number, item: CleaningItem) => void;
+  addCleaningItem: (item: Omit<CleaningItem, "id">) => void;
+  removeCleaningItem: (id: string) => void;
+  updateCleaningItem: (id: string, item: Partial<CleaningItem>) => void;
   setPaymentMethod: (method: OrderPaymentMethod | null) => void;
   resetForm: () => void;
   calculateTotal: () => number;
@@ -64,26 +66,29 @@ export function OrderFormProvider({ children }: { children: React.ReactNode }) {
     setFormData((prev) => ({ ...prev, ironingQuantity: quantity }));
   }, []);
 
-  const addCleaningItem = useCallback((item: CleaningItem) => {
+  const addCleaningItem = useCallback((item: Omit<CleaningItem, "id">) => {
     setFormData((prev) => ({
       ...prev,
-      cleaningItems: [...prev.cleaningItems, item],
+      cleaningItems: [
+        ...prev.cleaningItems,
+        { ...item, id: crypto.randomUUID() },
+      ],
     }));
   }, []);
 
-  const removeCleaningItem = useCallback((index: number) => {
+  const removeCleaningItem = useCallback((id: string) => {
     setFormData((prev) => ({
       ...prev,
-      cleaningItems: prev.cleaningItems.filter((_, i) => i !== index),
+      cleaningItems: prev.cleaningItems.filter((it) => it.id !== id),
     }));
   }, []);
 
   const updateCleaningItem = useCallback(
-    (index: number, item: CleaningItem) => {
+    (id: string, item: Partial<CleaningItem>) => {
       setFormData((prev) => ({
         ...prev,
-        cleaningItems: prev.cleaningItems.map((it, i) =>
-          i === index ? item : it
+        cleaningItems: prev.cleaningItems.map((it) =>
+          it.id === id ? { ...it, ...item } : it
         ),
       }));
     },

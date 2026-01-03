@@ -11,7 +11,13 @@ import {
   PendingItems,
   OrdersByTypeChart,
 } from "@/components/pages/dashboard";
-import { DollarSign, Receipt, CreditCard, TrendingUp } from "lucide-react";
+import {
+  DollarSign,
+  Receipt,
+  CreditCard,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { useDashboardStats } from "@/hooks/useDashboard";
 
 export default function Home() {
@@ -25,7 +31,7 @@ export default function Home() {
     <AdminOnly>
       <div className="space-y-6">
         {/* Stats Overview */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           <StatCard
             title="Ventas Totales"
             value={data?.totalSales || 0}
@@ -33,10 +39,16 @@ export default function Home() {
             icon={DollarSign}
           />
           <StatCard
-            title="Dinero Recibido"
+            title="Ingreso Neto"
             value={data?.totalReceived || 0}
-            description="Total pagado por clientes"
+            description="Ingreso neto (descontando el 50% de tintoreria)"
             icon={CreditCard}
+          />
+          <StatCard
+            title="Efectivo en Caja"
+            value={data?.cashOnHand || 0}
+            description="No considera el deposito inicial"
+            icon={Wallet}
           />
           <StatCard
             title="Total de Órdenes"

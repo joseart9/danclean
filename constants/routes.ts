@@ -1,9 +1,11 @@
 import {
   Home,
   List,
+  BarChart,
   ShoppingCart,
   Truck,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@/generated/prisma/browser";
@@ -41,6 +43,18 @@ export const ROUTES: Route[] = [
     href: "/customers",
     label: "Clientes",
     icon: Users,
+    permissions: ["ADMIN"],
+  },
+  {
+    href: "/reports",
+    label: "Reportes",
+    icon: BarChart,
+    permissions: ["ADMIN"],
+  },
+  {
+    href: "/expenses",
+    label: "Gastos",
+    icon: Wallet,
     permissions: ["ADMIN"],
   },
 ];

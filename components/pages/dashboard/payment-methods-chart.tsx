@@ -95,9 +95,9 @@ export function PaymentMethodsChart({
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-2xl font-bold">
-                            {new Intl.NumberFormat("es-CO", {
+                            {new Intl.NumberFormat("es-MX", {
                               style: "currency",
-                              currency: "COP",
+                              currency: "MXN",
                               minimumFractionDigits: 0,
                             }).format(data.value as number)}
                           </span>

@@ -3,7 +3,7 @@ import type { User } from "@/types/user";
 import { Badge } from "@/components/ui/badge";
 
 const formatDate = (date: Date | string) => {
-  return new Intl.DateTimeFormat("es-CO", {
+  return new Intl.DateTimeFormat("es-MX", {
     year: "numeric",
     month: "long",
     day: "numeric",

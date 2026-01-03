@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -13,51 +7,17 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Role {
-  ADMIN
-  USER
-}
-
-enum OrderType {
-  IRONING
-  CLEANING
-}
-
-enum OrderPaymentStatus {
-  PENDING
-  PAID
-  PARTIALLY_PAID
-  CANCELLED
-  REFUNDED
-}
-
-enum OrderPaymentMethod {
-  CASH
-  CARD
-  TRANSFER
-}
-
-enum OrderStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-  DAMAGED
-  LOST
-  DELIVERED
-  PICKED_UP
-}
-
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique @map("email")
-  password  String   @map("password")
-  name      String   @map("name")
-  lastName  String   @map("last_name")
-  role      Role     @default(USER) @map("role")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id        String    @id @default(uuid())
+  email     String    @unique @map("email")
+  password  String    @map("password")
+  name      String    @map("name")
+  lastName  String    @map("last_name")
+  role      Role      @default(USER) @map("role")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
   orders    Order[]
+  expenses  Expense[]
 
   @@map("users")
 }
@@ -104,27 +64,25 @@ model OrderItem {
   id        String    @id @default(uuid())
   type      OrderType @map("type")
   orderId   String    @map("order_id")
-  itemId    String    @map("item_id") // IroningItem | CleaningItem
+  itemId    String    @map("item_id")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@map("order_items")
 }
 
 model Storage {
-  id              String   @id @default(uuid())
-  storageNumber   Int      @unique @map("storage_number")
-  totalCapacity   Int      @map("total_capacity")
-  usedCapacity    Int      @default(0) @map("used_capacity")
-  fromNumberRange Int      @map("from_number_range")
-  toNumberRange   Int      @map("to_number_range")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  orders             Order[]
+  id                 String              @id @default(uuid())
+  storageNumber      Int                 @unique @map("storage_number")
+  totalCapacity      Int                 @map("total_capacity")
+  usedCapacity       Int                 @default(0) @map("used_capacity")
+  fromNumberRange    Int                 @map("from_number_range")
+  toNumberRange      Int                 @map("to_number_range")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
   activeOrderNumbers ActiveOrderNumber[]
+  orders             Order[]
 
   @@map("storages")
 }
@@ -135,8 +93,7 @@ model ActiveOrderNumber {
   orderId     String   @unique @map("order_id")
   storageId   String   @map("storage_id")
   createdAt   DateTime @default(now()) @map("created_at")
-
-  storage Storage @relation(fields: [storageId], references: [id], onDelete: Cascade)
+  storage     Storage  @relation(fields: [storageId], references: [id], onDelete: Cascade)
 
   @@map("active_order_numbers")
 }
@@ -146,24 +103,83 @@ model Order {
   type          OrderType          @map("type")
   customerId    String             @map("customer_id")
   paymentStatus OrderPaymentStatus @map("payment_status")
-  paymentMethod OrderPaymentMethod @map("payment_method") // Cash | Card | Transfer
-  status        OrderStatus        @map("status") // Pending | In Progress | Completed | Cancelled | Damaged | Lost | Delivered | PickedUp
+  paymentMethod OrderPaymentMethod @map("payment_method")
+  status        OrderStatus        @map("status")
   total         Float              @map("total")
-  totalPaid     Float              @default(0) @map("total_paid")
-  orderItems    OrderItem[]
   orderNumber   Int                @map("order_number")
-  storageId     String?            @map("storage_id")
   mainOrderId   String?            @map("main_order_id")
-  isMainOrder   Boolean            @default(true) @map("is_main_order")
-  userId        String             @map("user_id")
   createdAt     DateTime           @default(now()) @map("created_at")
-
-  updatedAt    DateTime @updatedAt @map("updated_at") // Updated when the order is updated
-  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  storage      Storage? @relation(fields: [storageId], references: [id], onDelete: SetNull)
-  mainOrder    Order?   @relation("MainOrder", fields: [mainOrderId], references: [id], onDelete: Cascade)
-  orderHistory Order[]  @relation("MainOrder")
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  totalPaid     Float              @default(0) @map("total_paid")
+  paid          Float              @default(0) @map("paid")
+  storageId     String?            @map("storage_id")
+  userId        String             @map("user_id")
+  isMainOrder   Boolean            @default(true) @map("is_main_order")
+  orderItems    OrderItem[]
+  customer      Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  mainOrder     Order?             @relation("MainOrder", fields: [mainOrderId], references: [id], onDelete: Cascade)
+  orderHistory  Order[]            @relation("MainOrder")
+  storage       Storage?           @relation(fields: [storageId], references: [id])
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("orders")
+}
+
+model CleaningItemOption {
+  id        String   @id @default(uuid())
+  name      String   @map("name")
+  price     Float    @map("price")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  toPrice   Float?   @map("to_price")
+
+  @@map("cleaning_item_options")
+}
+
+model Expense {
+  id        String   @id @default(uuid())
+  name      String   @map("name")
+  amount    Float    @map("amount")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("expenses")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum OrderType {
+  IRONING
+  CLEANING
+}
+
+enum OrderPaymentStatus {
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  CANCELLED
+  REFUNDED
+}
+
+enum OrderPaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DAMAGED
+  LOST
+  DELIVERED
+  PICKED_UP
 }

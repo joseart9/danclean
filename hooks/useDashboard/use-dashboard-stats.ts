@@ -4,6 +4,7 @@ import { apiClient } from "@/lib/axios";
 export interface DashboardStats {
   totalSales: number;
   totalReceived: number;
+  cashOnHand: number;
   totalOrders: number;
   averageOrderValue: number;
   paymentMethods: {

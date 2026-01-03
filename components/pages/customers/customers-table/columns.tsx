@@ -2,7 +2,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import type { Customer } from "@/types/customer";
 
 const formatDate = (date: Date | string) => {
-  return new Intl.DateTimeFormat("es-CO", {
+  return new Intl.DateTimeFormat("es-MX", {
     year: "numeric",
     month: "long",
     day: "numeric",

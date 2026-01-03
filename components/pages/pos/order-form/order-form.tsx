@@ -28,114 +28,237 @@ import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OrderCompletionDialog } from "./order-completion-dialog";
-
-// Hardcoded cleaning items as requested
-const CLEANING_ITEMS = ["VESTIDO", "TRAJE"];
+import { useCleaningItemOptions } from "@/hooks/useCleaningItemOptions";
+import { CommandInput, CommandEmpty } from "@/components/ui/command";
+import { Slider } from "@/components/ui/slider";
+import { Separator } from "@/components/ui/separator";
 
 interface CleaningItemFormProps {
-  item: { item_name: string; quantity: number };
-  index: number;
+  item: { id: string; item_name: string; quantity: number; price: number };
   onUpdate: (
-    index: number,
-    item: { item_name: string; quantity: number }
+    id: string,
+    item: { item_name: string; quantity: number; price: number }
   ) => void;
-  onRemove: (index: number) => void;
+  onRemove: (id: string) => void;
 }
 
-function CleaningItemForm({
-  item,
-  index,
-  onUpdate,
-  onRemove,
-}: CleaningItemFormProps) {
+function CleaningItemForm({ item, onUpdate, onRemove }: CleaningItemFormProps) {
   const [itemOpen, setItemOpen] = React.useState(false);
   const [selectedItem, setSelectedItem] = React.useState(item.item_name);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const { data: cleaningItemOptions, isLoading } = useCleaningItemOptions();
 
-  const handleItemSelect = (value: string) => {
-    setSelectedItem(value);
-    onUpdate(index, { ...item, item_name: value });
-    setItemOpen(false);
+  const selectedOption = React.useMemo(() => {
+    return cleaningItemOptions.find((option) => option.name === item.item_name);
+  }, [cleaningItemOptions, item.item_name]);
+
+  const hasPriceRange =
+    selectedOption?.toPrice !== null && selectedOption?.toPrice !== undefined;
+  const minPrice = selectedOption?.price ?? 0;
+  const maxPrice = selectedOption?.toPrice ?? selectedOption?.price ?? 0;
+
+  const handleItemSelect = (itemName: string) => {
+    const option = cleaningItemOptions.find((opt) => opt.name === itemName);
+    if (option) {
+      setSelectedItem(itemName);
+      const initialPrice = option.price;
+      onUpdate(item.id, {
+        item_name: itemName,
+        quantity: item.quantity,
+        price: initialPrice,
+      });
+      setItemOpen(false);
+      setSearchQuery("");
+    }
   };
 
   const handleQuantityChange = (value: string) => {
-    onUpdate(index, { ...item, quantity: parseInt(value) || 1 });
+    onUpdate(item.id, {
+      item_name: item.item_name,
+      quantity: parseInt(value) || 1,
+      price: item.price,
+    });
+  };
+
+  const handlePriceChange = (value: number[]) => {
+    onUpdate(item.id, {
+      item_name: item.item_name,
+      quantity: item.quantity,
+      price: value[0],
+    });
+  };
+
+  const filteredItems = React.useMemo(() => {
+    if (!searchQuery) return cleaningItemOptions;
+    const query = searchQuery.toLowerCase();
+    return cleaningItemOptions.filter((option) =>
+      option.name.toLowerCase().includes(query)
+    );
+  }, [cleaningItemOptions, searchQuery]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency: "MXN",
+      minimumFractionDigits: 0,
+    }).format(amount);
   };
 
   return (
-    <div className="flex gap-2 items-end">
-      <Field className="flex-1">
-        <FieldLabel>Item</FieldLabel>
-        <FieldContent>
-          <Popover open={itemOpen} onOpenChange={setItemOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={itemOpen}
-                className="w-full justify-between"
-              >
-                {selectedItem || "Seleccionar item..."}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-full p-0" align="start">
-              <Command>
-                <CommandList>
-                  <CommandGroup>
-                    {CLEANING_ITEMS.map((cleaningItem) => (
-                      <CommandItem
-                        key={cleaningItem}
-                        value={cleaningItem}
-                        onSelect={handleItemSelect}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedItem === cleaningItem
-                              ? "opacity-100"
-                              : "opacity-0"
-                          )}
-                        />
-                        {cleaningItem}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </FieldContent>
-      </Field>
+    <div className="space-y-3 rounded-lg p-2 border border-border">
+      <div className="flex gap-2 items-end">
+        <Field className="flex-1">
+          <FieldContent>
+            <Popover open={itemOpen} onOpenChange={setItemOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={itemOpen}
+                  className="w-full justify-between"
+                >
+                  {selectedItem || "Seleccionar item..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0" align="start">
+                <Command>
+                  <CommandInput
+                    placeholder="Buscar prenda..."
+                    value={searchQuery}
+                    onValueChange={setSearchQuery}
+                  />
+                  <CommandList>
+                    <CommandEmpty>
+                      {isLoading ? "Cargando..." : "No se encontraron prendas"}
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {filteredItems.map((cleaningItemOption) => (
+                        <CommandItem
+                          key={cleaningItemOption.id}
+                          value={cleaningItemOption.name}
+                          onSelect={() =>
+                            handleItemSelect(cleaningItemOption.name)
+                          }
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedItem === cleaningItemOption.name
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          {cleaningItemOption.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </FieldContent>
+        </Field>
 
-      <Field className="w-32">
-        <FieldLabel>Cantidad</FieldLabel>
-        <FieldContent>
-          <Select
-            value={item.quantity.toString()}
-            onValueChange={handleQuantityChange}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
-                <SelectItem key={num} value={num.toString()}>
-                  {num}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FieldContent>
-      </Field>
+        <Field className="w-32">
+          <FieldLabel>Cantidad</FieldLabel>
+          <FieldContent>
+            <Select
+              value={item.quantity.toString()}
+              onValueChange={handleQuantityChange}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
+                  <SelectItem key={num} value={num.toString()}>
+                    {num}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FieldContent>
+        </Field>
 
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        onClick={() => onRemove(index)}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => onRemove(item.id)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {selectedItem && (
+        <Field>
+          <FieldContent>
+            {hasPriceRange ? (
+              <div className="space-y-3">
+                <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm text-muted-foreground">
+                        Precio seleccionado
+                      </span>
+                      <span className="text-2xl font-bold text-foreground">
+                        {formatCurrency(item.price)}
+                      </span>
+                    </div>
+                    <div className="text-right flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">
+                        Rango disponible
+                      </span>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {formatCurrency(minPrice)} - {formatCurrency(maxPrice)}
+                      </span>
+                    </div>
+                  </div>
+                  <Slider
+                    value={[item.price]}
+                    onValueChange={handlePriceChange}
+                    min={minPrice}
+                    max={maxPrice}
+                    step={1}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {item.quantity} unidad{item.quantity > 1 ? "es" : ""} ×{" "}
+                    {formatCurrency(item.price)}
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    Total: {formatCurrency(item.price * item.quantity)}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-muted/50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm text-muted-foreground">
+                      Precio por unidad
+                    </span>
+                    <span className="text-2xl font-bold text-foreground">
+                      {formatCurrency(item.price)}
+                    </span>
+                  </div>
+                  <div className="text-right flex flex-col gap-1">
+                    <span className="text-sm text-muted-foreground">
+                      {item.quantity} unidad{item.quantity > 1 ? "es" : ""}
+                    </span>
+                    <span className="text-lg font-semibold text-foreground">
+                      {formatCurrency(item.price * item.quantity)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </FieldContent>
+        </Field>
+      )}
     </div>
   );
 }
@@ -156,9 +279,17 @@ export function OrderForm() {
 
   const [paymentMethodOpen, setPaymentMethodOpen] = React.useState(false);
   const [completionDialogOpen, setCompletionDialogOpen] = React.useState(false);
+  const { data: cleaningItemOptions } = useCleaningItemOptions();
 
   const handleAddCleaningItem = () => {
-    addCleaningItem({ item_name: CLEANING_ITEMS[0], quantity: 1 });
+    const firstItem = cleaningItemOptions[0];
+    if (firstItem) {
+      addCleaningItem({
+        item_name: firstItem.name,
+        quantity: 1,
+        price: firstItem.price,
+      });
+    }
   };
 
   const paymentMethodLabels: Record<OrderPaymentMethod, string> = {
@@ -240,7 +371,7 @@ export function OrderForm() {
       {/* CLEANING Items */}
       {formData.type === OrderType.CLEANING && (
         <Field>
-          <FieldLabel required>Items de Tintoreria</FieldLabel>
+          <FieldLabel required>Prendas</FieldLabel>
           <FieldContent>
             <div className="space-y-3">
               {formData.cleaningItems.length === 0 ? (
@@ -251,15 +382,14 @@ export function OrderForm() {
                   className="w-full"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Agregar item
+                  Agregar prenda
                 </Button>
               ) : (
                 <>
-                  {formData.cleaningItems.map((item, index) => (
+                  {formData.cleaningItems.map((item) => (
                     <CleaningItemForm
-                      key={index}
+                      key={item.id}
                       item={item}
-                      index={index}
                       onUpdate={updateCleaningItem}
                       onRemove={removeCleaningItem}
                     />

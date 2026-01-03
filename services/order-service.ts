@@ -31,11 +31,7 @@ import {
   calculateGarmentCount,
 } from "@/utils";
 
-// Cleaning prices for individual item totals (needed for database storage)
-const CLEANING_PRICES: Record<string, number> = {
-  VESTIDO: 10.0,
-  TRAJE: 15.0,
-};
+// Cleaning prices are now fetched from the database via cleaningItemOptions
 
 export class OrderService {
   /**
@@ -269,8 +265,8 @@ export class OrderService {
       // Create cleaning items
       const cleaningItems = await Promise.all(
         data.items.map(async (item) => {
-          const itemTotal =
-            (CLEANING_PRICES[item.item_name] || 10.0) * item.quantity;
+          // Use the price from the item (item.price * item.quantity)
+          const itemTotal = item.price * item.quantity;
           const cleaningItem = await cleaningItemService.createCleaningItem({
             item_name: item.item_name,
             quantity: item.quantity,
@@ -297,6 +293,7 @@ export class OrderService {
           status: data.status,
           total: total,
           totalPaid: data.totalPaid ?? 0,
+          paid: data.paid ?? data.totalPaid ?? 0,
           orderNumber: data.orderNumber,
           storageId: null,
           userId: userId,
@@ -346,6 +343,7 @@ export class OrderService {
           status: data.status,
           total: total,
           totalPaid: data.totalPaid ?? 0,
+          paid: data.paid ?? data.totalPaid ?? 0,
           orderNumber: 0, // Temporary placeholder
           userId: userId,
           mainOrderId: data.mainOrderId,
@@ -692,6 +690,7 @@ export class OrderService {
         status: newStatus,
         total: latestOrder.total, // Keep the same total
         totalPaid: data.totalPaid ?? latestOrder.totalPaid,
+        paid: data.paid ?? latestOrder.paid,
         orderNumber: latestOrder.orderNumber, // Keep the same order number
         storageId: latestOrder.storageId, // Keep the same storage
         mainOrderId: originalOrderId, // Link to the original order

@@ -60,9 +60,9 @@ export function TopCustomers({ fromDate, toDate }: TopCustomersProps) {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-medium">
-                    {new Intl.NumberFormat("es-CO", {
+                    {new Intl.NumberFormat("es-MX", {
                       style: "currency",
-                      currency: "COP",
+                      currency: "MXN",
                       minimumFractionDigits: 0,
                     }).format(customer.total)}
                   </p>

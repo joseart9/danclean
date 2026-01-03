@@ -55,15 +55,18 @@ export function OrderCompletionDialog({
 
   const isCash = formData.paymentMethod === OrderPaymentMethod.CASH;
   const amountPaidNum = parseFloat(amountPaid) || 0;
-  const change = amountPaidNum - total;
+  // For cash, actual amount paid toward order is capped at total (change is given back)
+  // For other payment methods, amount cannot exceed total
+  const actualAmountPaid = Math.min(amountPaidNum, total);
+  const change = isCash && amountPaidNum > total ? amountPaidNum - total : 0;
   const isPartialPayment = amountPaidNum > 0 && amountPaidNum < total;
   const isFullPayment = amountPaidNum >= total;
   const remaining = total - amountPaidNum;
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-CO", {
+    return new Intl.NumberFormat("es-MX", {
       style: "currency",
-      currency: "COP",
+      currency: "MXN",
       minimumFractionDigits: 0,
     }).format(amount);
   };
@@ -85,8 +88,9 @@ export function OrderCompletionDialog({
       return;
     }
 
-    // Amount cannot exceed total (for any payment method)
-    if (amountPaidNum > total) {
+    // For non-cash payments, amount cannot exceed total
+    // For cash payments, overpayment is allowed (change will be given)
+    if (!isCash && amountPaidNum > total) {
       toast.error("El monto pagado no puede exceder el total");
       return;
     }
@@ -108,7 +112,8 @@ export function OrderCompletionDialog({
         paymentMethod: formData.paymentMethod,
         paymentStatus,
         status: "PENDING",
-        totalPaid: amountPaidNum,
+        totalPaid: actualAmountPaid,
+        paid: actualAmountPaid,
       };
 
       // Add items based on type
@@ -120,7 +125,8 @@ export function OrderCompletionDialog({
         formData.type === OrderType.CLEANING &&
         formData.cleaningItems.length > 0
       ) {
-        orderData.items = formData.cleaningItems;
+        // Strip the id field before sending to API
+        orderData.items = formData.cleaningItems.map(({ id, ...item }) => item);
       } else {
         toast.error("Por favor completa los items de la orden");
         setIsLoading(false);
@@ -254,7 +260,7 @@ export function OrderCompletionDialog({
                   onChange={(e) => setAmountPaid(e.target.value)}
                   min={0}
                   step="0.01"
-                  max={total}
+                  max={isCash ? undefined : total}
                 />
               </FieldContent>
             </Field>
@@ -321,7 +327,7 @@ export function OrderCompletionDialog({
             <Button
               type="button"
               onClick={handleSubmit}
-              disabled={isLoading || amountPaidNum > total}
+              disabled={isLoading || (!isCash && amountPaidNum > total)}
             >
               {isLoading ? (
                 <>

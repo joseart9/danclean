@@ -14,9 +14,9 @@ export const SummaryComponent = () => {
   const { formData, calculateTotal } = useOrderForm();
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-CO", {
+    return new Intl.NumberFormat("es-MX", {
       style: "currency",
-      currency: "COP",
+      currency: "MXN",
       minimumFractionDigits: 0,
     }).format(amount);
   };
@@ -73,7 +73,7 @@ export const SummaryComponent = () => {
               <Separator />
               <div className="flex flex-col gap-2">
                 <h2 className="text-sm font-medium text-muted-foreground">
-                  Items
+                  Prendas
                 </h2>
                 <div className="flex flex-col gap-1">
                   {formData.cleaningItems.map((item, index) => (

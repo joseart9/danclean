@@ -27,9 +27,9 @@ export function StatCard({
   const formatValue = (val: string | number): string => {
     if (typeof val === "number") {
       if (isMoney) {
-        return new Intl.NumberFormat("es-CO", {
+        return new Intl.NumberFormat("es-MX", {
           style: "currency",
-          currency: "COP",
+          currency: "MXN",
           minimumFractionDigits: 0,
         }).format(val);
       }

@@ -66,9 +66,9 @@ export function DeliveryCompletionDialog({
     isCash && newTotalPaid > order.total ? newTotalPaid - order.total : 0;
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-CO", {
+    return new Intl.NumberFormat("es-MX", {
       style: "currency",
-      currency: "COP",
+      currency: "MXN",
       minimumFractionDigits: 0,
     }).format(amount);
   };
@@ -108,14 +108,20 @@ export function DeliveryCompletionDialog({
       const paymentStatus = getPaymentStatus();
 
       // Prepare update data
+      // paid should be the actual amount applied to the order (after accounting for change)
+      // not the amount the customer gave
+      const actualAmountPaid = finalTotalPaid - order.totalPaid;
+
       const updateData: {
         status: OrderStatus;
         totalPaid: number;
+        paid: number;
         paymentStatus: OrderPaymentStatus;
         paymentMethod?: OrderPaymentMethod;
       } = {
         status: OrderStatus.DELIVERED,
         totalPaid: finalTotalPaid,
+        paid: actualAmountPaid,
         paymentStatus,
       };
 

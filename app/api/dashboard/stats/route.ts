@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/db";
 import { AppError } from "@/errors";
-import { OrderPaymentMethod } from "@/types/order";
+import { OrderPaymentMethod, OrderType } from "@/types/order";
 import { OrderStatus } from "@/generated/prisma/enums";
+import { expenseService } from "@/services/expense-service";
 
 export async function GET(request: Request) {
   try {
@@ -37,21 +38,44 @@ export async function GET(request: Request) {
       },
     });
 
-    // Calculate total sales (sum of all order totals)
-    const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
+    // Helper function to get adjusted amount (divide by 2 for CLEANING orders)
+    const getAdjustedAmount = (order: (typeof orders)[0], amount: number) => {
+      return order.type === OrderType.CLEANING ? amount / 2 : amount;
+    };
 
-    // Calculate total money received (sum of totalPaid)
-    const totalReceived = orders.reduce(
-      (sum, order) => sum + order.totalPaid,
+    // Calculate total expenses for the date range
+    const expenses = await expenseService.getAllExpenses(from, to);
+    const totalExpenses = expenses.reduce(
+      (sum, expense) => sum + expense.amount,
       0
     );
 
-    // Calculate payment methods breakdown
+    // Calculate total sales (sum of all order totals, 100% for all orders)
+    // This represents the total sale amount, not the net income
+    const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
+
+    // Calculate total money received (sum of totalPaid, divided by 2 for CLEANING)
+    // Subtract expenses since they reduce net income
+    const totalReceivedBeforeExpenses = orders.reduce(
+      (sum, order) => sum + getAdjustedAmount(order, order.totalPaid),
+      0
+    );
+    const totalReceived = totalReceivedBeforeExpenses - totalExpenses;
+
+    // Calculate payment methods breakdown (divided by 2 for CLEANING)
     const paymentMethods = orders.reduce((acc, order) => {
+      const adjustedAmount = getAdjustedAmount(order, order.totalPaid);
       acc[order.paymentMethod] =
-        (acc[order.paymentMethod] || 0) + order.totalPaid;
+        (acc[order.paymentMethod] || 0) + adjustedAmount;
       return acc;
     }, {} as Record<OrderPaymentMethod, number>);
+
+    // Calculate cash on hand (100% of cash payments, including CLEANING, because partner is paid later)
+    // Subtract expenses since they reduce cash in register
+    const cashOnHandBeforeExpenses = orders
+      .filter((order) => order.paymentMethod === OrderPaymentMethod.CASH)
+      .reduce((sum, order) => sum + order.totalPaid, 0);
+    const cashOnHand = cashOnHandBeforeExpenses - totalExpenses;
 
     // Get storage statistics
     const storages = await prisma.storage.findMany({
@@ -86,6 +110,14 @@ export async function GET(request: Request) {
       },
     });
 
+    // Helper function for customer totals (divide by 2 for CLEANING orders)
+    const getAdjustedCustomerAmount = (
+      order: (typeof allOrders)[0],
+      amount: number
+    ) => {
+      return order.type === OrderType.CLEANING ? amount / 2 : amount;
+    };
+
     const customerTotals = allOrders.reduce(
       (acc, order) => {
         const customerId = order.customerId;
@@ -96,7 +128,7 @@ export async function GET(request: Request) {
             orderCount: 0,
           };
         }
-        acc[customerId].total += order.total;
+        acc[customerId].total += getAdjustedCustomerAmount(order, order.total);
         acc[customerId].orderCount += 1;
         return acc;
       },
@@ -198,13 +230,13 @@ export async function GET(request: Request) {
       0
     );
 
-    // Get daily sales data for chart
+    // Get daily sales data for chart (divided by 2 for CLEANING)
     const dailySales = orders.reduce((acc, order) => {
       const dateKey = order.createdAt.toISOString().split("T")[0];
       if (!acc[dateKey]) {
         acc[dateKey] = { date: dateKey, sales: 0, orders: 0 };
       }
-      acc[dateKey].sales += order.total;
+      acc[dateKey].sales += getAdjustedAmount(order, order.total);
       acc[dateKey].orders += 1;
       return acc;
     }, {} as Record<string, { date: string; sales: number; orders: number }>);
@@ -223,6 +255,7 @@ export async function GET(request: Request) {
       {
         totalSales,
         totalReceived,
+        cashOnHand,
         totalOrders,
         averageOrderValue,
         paymentMethods: {

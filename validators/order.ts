@@ -13,11 +13,12 @@ const ironingItemsSchema = z.object({
   quantity: z.number().int().positive("La cantidad debe ser positiva"),
 });
 
-// Schema for CLEANING items (array of items with name and quantity)
+// Schema for CLEANING items (array of items with name, quantity, and price)
 const cleaningItemsSchema = z.array(
   z.object({
     item_name: z.string().min(1, "El nombre del item es requerido"),
     quantity: z.number().int().positive("La cantidad debe ser positiva"),
+    price: z.number().positive("El precio debe ser positivo"),
   })
 );
 
@@ -33,6 +34,10 @@ export const createOrderSchema = z
       .default(OrderPaymentStatus.PENDING),
     status: z.nativeEnum(OrderStatus).default(OrderStatus.PENDING),
     totalPaid: z
+      .number()
+      .nonnegative("El monto pagado no puede ser negativo")
+      .default(0),
+    paid: z
       .number()
       .nonnegative("El monto pagado no puede ser negativo")
       .default(0),
@@ -63,6 +68,10 @@ export const updateOrderSchema = z.object({
   status: z.nativeEnum(OrderStatus).optional(),
   total: z.number().nonnegative("El total debe ser no negativo").optional(),
   totalPaid: z
+    .number()
+    .nonnegative("El monto pagado no puede ser negativo")
+    .optional(),
+  paid: z
     .number()
     .nonnegative("El monto pagado no puede ser negativo")
     .optional(),

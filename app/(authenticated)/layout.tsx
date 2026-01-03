@@ -15,7 +15,7 @@ import { usePathname } from "next/navigation";
 
 function HeaderContent() {
   const pathname = usePathname();
-  const isDashboard = pathname === "/";
+  const isActive = pathname === "/" || pathname === "/expenses";
   const { range, rangeCompare, setRange, setRangeCompare } = useDateRange();
 
   return (
@@ -29,7 +29,7 @@ function HeaderContent() {
       </div>
       <div className="flex-1" />
       <div className="flex items-center gap-2 px-4">
-        {isDashboard && (
+        {isActive && (
           <>
             <DateRangePicker
               initialDateFrom={range.from}

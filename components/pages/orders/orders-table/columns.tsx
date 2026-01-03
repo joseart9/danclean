@@ -5,9 +5,9 @@ import { translateOrderStatus } from "@/utils/translate-order-status";
 import { Badge } from "@/components/ui/badge";
 
 const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("es-CO", {
+  return new Intl.NumberFormat("es-MX", {
     style: "currency",
-    currency: "COP",
+    currency: "MXN",
     minimumFractionDigits: 0,
   }).format(amount);
 };

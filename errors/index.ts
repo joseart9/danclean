@@ -13,3 +13,5 @@ export {
   IroningItemNotFoundError,
   CleaningItemNotFoundError,
 } from "./item-errors";
+export { CleaningItemOptionNotFoundError } from "./cleaning-item-option-errors";
+export { ExpenseNotFoundError } from "./expense-errors";
