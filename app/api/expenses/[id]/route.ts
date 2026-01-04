@@ -1,15 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { expenseService } from "@/services/expense-service";
 import { updateExpenseSchema } from "@/validators/expense";
 import { AppError } from "@/errors";
 import { z } from "zod";
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const expense = await expenseService.getExpenseById(params.id);
+    const { id } = await params;
+    const expense = await expenseService.getExpenseById(id);
     return NextResponse.json(expense, { status: 200 });
   } catch (error) {
     if (error instanceof AppError) {
@@ -31,20 +32,18 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const data = await request.json();
 
     // Validate request body
     const validatedData = updateExpenseSchema.parse(data);
 
     // Update expense
-    const expense = await expenseService.updateExpense(
-      params.id,
-      validatedData
-    );
+    const expense = await expenseService.updateExpense(id, validatedData);
 
     // Return success response
     return NextResponse.json(expense, { status: 200 });
@@ -76,11 +75,12 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await expenseService.deleteExpense(params.id);
+    const { id } = await params;
+    await expenseService.deleteExpense(id);
     return NextResponse.json(
       { message: "Gasto eliminado exitosamente" },
       { status: 200 }
