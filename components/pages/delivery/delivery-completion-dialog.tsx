@@ -152,17 +152,15 @@ export function DeliveryCompletionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent
+        className="sm:max-w-md max-h-[90vh] flex flex-col"
+        showCloseButton={false}
+      >
+        <DialogHeader className="shrink-0">
           <DialogTitle>Terminar Entrega</DialogTitle>
-          <DialogDescription>
-            {!isFullyPaid
-              ? "Registra el pago adicional antes de completar la entrega"
-              : "Confirma la entrega de la orden"}
-          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
           {/* Payment Information Summary */}
           <Field>
             <FieldLabel className="text-sm text-muted-foreground">
@@ -284,7 +282,7 @@ export function DeliveryCompletionDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button
             type="button"
             variant="outline"

@@ -181,8 +181,8 @@ export function OrderCompletionDialog({
         open={showOrderNumberDialog}
         onOpenChange={handleOrderNumberDialogClose}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="text-center">
               ¡Orden Creada Exitosamente!
             </DialogTitle>
@@ -191,7 +191,7 @@ export function OrderCompletionDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-2">
                 Número de Orden
@@ -207,7 +207,7 @@ export function OrderCompletionDialog({
             </p>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button onClick={handleOrderNumberDialogClose} className="w-full">
               Cerrar
             </Button>
@@ -217,12 +217,12 @@ export function OrderCompletionDialog({
 
       {/* Order Completion Dialog */}
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Finalizar Orden</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
             {/* Total */}
             <Field>
               <FieldLabel className="text-sm text-muted-foreground">
@@ -315,7 +315,7 @@ export function OrderCompletionDialog({
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button
               type="button"
               variant="outline"
