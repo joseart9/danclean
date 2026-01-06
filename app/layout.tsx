@@ -20,6 +20,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Dan Clean App",
   description: "Dan Clean - Tintoreria y Lavandería",
+  manifest: "/manifest.json",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#8B5CF6" },
+    { media: "(prefers-color-scheme: dark)", color: "#8B5CF6" },
+  ],
+  icons: {
+    icon: [
+      { url: "/icon512_rounded.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icon512_rounded.png", sizes: "512x512", type: "image/png" },
+    ],
+  },
 };
 
 export default function RootLayout({
