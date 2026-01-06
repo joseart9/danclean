@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, Sparkles } from "lucide-react";
+import { Users, Sparkles, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SettingsSidebarProps {
@@ -18,6 +18,11 @@ const SETTINGS_OPTIONS = [
     id: "opciones-limpieza",
     label: "Opciones de Tintoreria",
     icon: Sparkles,
+  },
+  {
+    id: "whatsapp",
+    label: "WhatsApp",
+    icon: MessageCircle,
   },
 ] as const;
 

@@ -10,6 +10,7 @@ import {
   CleaningItemOptionForm,
   CleaningItemOptionsTable,
 } from "@/components/pages/settings/cleaning-item-options";
+import { WhatsAppSettings } from "@/components/pages/settings/whatsapp";
 import { useUsers } from "@/hooks/useUsers";
 import { useCleaningItemOptions } from "@/hooks/useCleaningItemOptions";
 import { AdminOnly } from "@/components/auth/admin-only";
@@ -101,6 +102,8 @@ function SettingsPageContent() {
             </div>
           </div>
         )}
+
+        {activeOption === "whatsapp" && <WhatsAppSettings />}
       </div>
     </div>
   );
