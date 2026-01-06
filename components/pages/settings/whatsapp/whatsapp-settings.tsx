@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import axios from "axios";
 
-const WHATSAPP_API_URL = "http://localhost:4000";
+const NEXT_PUBLIC_WHATSAPP_API_URL = process.env.NEXT_PUBLIC_WHATSAPP_API_URL;
 
 interface QRResponse {
   status: string;
@@ -32,13 +32,15 @@ interface HealthResponse {
 }
 
 async function fetchQRCode(): Promise<QRResponse> {
-  const response = await axios.get<QRResponse>(`${WHATSAPP_API_URL}/connect`);
+  const response = await axios.get<QRResponse>(
+    `${NEXT_PUBLIC_WHATSAPP_API_URL}/connect`
+  );
   return response.data;
 }
 
 async function fetchHealth(): Promise<HealthResponse> {
   const response = await axios.get<HealthResponse>(
-    `${WHATSAPP_API_URL}/health`
+    `${NEXT_PUBLIC_WHATSAPP_API_URL}/health`
   );
   return response.data;
 }
