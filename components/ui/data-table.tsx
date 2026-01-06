@@ -122,7 +122,7 @@ const DataTable = <TData,>({
       return "calc(100vw - 3rem)";
     } else {
       // Sidebar is expanded (16rem)
-      return "calc(100vw - 16rem - 2rem)";
+      return "calc(100vw - 16rem - 2.5rem)";
     }
   };
 
