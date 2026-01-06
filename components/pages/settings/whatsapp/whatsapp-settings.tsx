@@ -29,12 +29,12 @@ interface HealthResponse {
 }
 
 async function fetchQRCode(): Promise<QRResponse> {
-  const response = await apiClient.get<QRResponse>("/api/whatsapp/connect");
+  const response = await apiClient.get<QRResponse>("/whatsapp/connect");
   return response.data;
 }
 
 async function fetchHealth(): Promise<HealthResponse> {
-  const response = await apiClient.get<HealthResponse>("/api/whatsapp/health");
+  const response = await apiClient.get<HealthResponse>("/whatsapp/health");
   return response.data;
 }
 
