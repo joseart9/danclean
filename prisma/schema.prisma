@@ -115,6 +115,7 @@ model Order {
   storageId     String?            @map("storage_id")
   userId        String             @map("user_id")
   isMainOrder   Boolean            @default(true) @map("is_main_order")
+  ticketNumber  Int                @map("ticket_number") @default(0)
   orderItems    OrderItem[]
   customer      Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
   mainOrder     Order?             @relation("MainOrder", fields: [mainOrderId], references: [id], onDelete: Cascade)

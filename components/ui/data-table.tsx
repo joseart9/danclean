@@ -137,13 +137,80 @@ const DataTable = <TData,>({
   // Show search input if enabled and name column exists
   const showSearch = enableSearchOnName && hasNameColumn;
 
+  // Helper function to get export data with only visible columns and proper headers
+  const getExportData = () => {
+    const selectedRows = table.getSelectedRowModel().rows;
+    const rowsToExport =
+      selectedRows.length > 0 ? selectedRows : table.getFilteredRowModel().rows;
+
+    // Get visible columns (excluding selection, actions, etc.)
+    const visibleColumns = table.getVisibleLeafColumns().filter((col) => {
+      const columnDef = col.columnDef;
+      // Exclude columns without accessorKey or id (like selection checkboxes)
+      return (
+        ("accessorKey" in columnDef && columnDef.accessorKey) ||
+        ("accessorFn" in columnDef && columnDef.accessorFn) ||
+        columnDef.id ||
+        col.id
+      );
+    });
+
+    // Transform data to only include visible columns with proper headers
+    return rowsToExport.map((row) => {
+      const exportRow: Record<string, unknown> = {};
+      visibleColumns.forEach((col) => {
+        const columnDef = col.columnDef;
+
+        // Get header text
+        let header = "";
+        if (typeof columnDef.header === "string") {
+          header = columnDef.header;
+        } else if (columnDef.id) {
+          header = columnDef.id;
+        } else if (col.id) {
+          header = col.id;
+        }
+
+        // Get the raw value from the row data
+        let value: unknown;
+        if ("accessorFn" in columnDef && columnDef.accessorFn) {
+          value = columnDef.accessorFn(row.original, row.index);
+        } else if ("accessorKey" in columnDef && columnDef.accessorKey) {
+          // Use accessorKey to get value directly from original data
+          const key = columnDef.accessorKey as string;
+          value = (row.original as Record<string, unknown>)[key];
+        } else if (columnDef.id || col.id) {
+          // Try to get value using the column id
+          value = row.getValue(col.id);
+        } else {
+          value = row.getValue(col.id);
+        }
+
+        // Format the value based on the column type/formatting
+        // For now, export the raw value - the column definitions should handle formatting
+        // Users can format in Excel/CSV if needed, or we can add formatting logic here
+
+        // Handle null/undefined
+        if (value === null || value === undefined) {
+          exportRow[header] = "";
+        } else if (typeof value === "object") {
+          // For objects (like dates), convert to string
+          if (value instanceof Date) {
+            exportRow[header] = value.toISOString();
+          } else {
+            exportRow[header] = JSON.stringify(value);
+          }
+        } else {
+          exportRow[header] = value;
+        }
+      });
+      return exportRow;
+    });
+  };
+
   // Export functions
   const exportToCSV = () => {
-    const selectedRows = table.getSelectedRowModel().rows;
-    const dataToExport =
-      selectedRows.length > 0
-        ? selectedRows.map((row) => row.original)
-        : table.getFilteredRowModel().rows.map((row) => row.original);
+    const dataToExport = getExportData();
 
     const csv = Papa.unparse(dataToExport, {
       header: true,
@@ -165,19 +232,16 @@ const DataTable = <TData,>({
   };
 
   const exportToExcel = () => {
-    const selectedRows = table.getSelectedRowModel().rows;
-    const dataToExport =
-      selectedRows.length > 0
-        ? selectedRows.map((row) => row.original)
-        : table.getFilteredRowModel().rows.map((row) => row.original);
+    const dataToExport = getExportData();
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
 
-    // Auto-size columns
-    const colsWidth = columns.map(() => ({ wch: 20 }));
+    // Auto-size columns based on visible columns
+    const visibleColumns = table.getVisibleLeafColumns();
+    const colsWidth = visibleColumns.map(() => ({ wch: 20 }));
     worksheet["!cols"] = colsWidth;
 
     XLSX.writeFile(
@@ -187,11 +251,7 @@ const DataTable = <TData,>({
   };
 
   const exportToJSON = () => {
-    const selectedRows = table.getSelectedRowModel().rows;
-    const dataToExport =
-      selectedRows.length > 0
-        ? selectedRows.map((row) => row.original)
-        : table.getFilteredRowModel().rows.map((row) => row.original);
+    const dataToExport = getExportData();
 
     const json = JSON.stringify(dataToExport, null, 2);
     const blob = new Blob([json], { type: "application/json" });
@@ -381,7 +441,13 @@ const DataTable = <TData,>({
         className="transition-all duration-200 ease-linear"
         style={getMaxWidth() ? { maxWidth: getMaxWidth() } : undefined}
       >
-        <div>
+        <div
+          className={
+            !showSearch && ((enableExport && data.length > 0) || sideButtons)
+              ? "pt-12"
+              : ""
+          }
+        >
           {showSearch && (
             <div className="pb-4 border-b">
               <Input

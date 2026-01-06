@@ -53,10 +53,18 @@ export async function GET(request: Request) {
     let to: Date | undefined;
 
     if (fromDate) {
-      from = new Date(fromDate);
+      // Parse date string (should be YYYY-MM-DD format from frontend)
+      // If it's an ISO string, extract just the date part
+      const fromDateStr = fromDate.includes("T")
+        ? fromDate.split("T")[0]
+        : fromDate;
+      from = new Date(fromDateStr);
     }
     if (toDate) {
-      to = new Date(toDate);
+      // Parse date string (should be YYYY-MM-DD format from frontend)
+      // If it's an ISO string, extract just the date part
+      const toDateStr = toDate.includes("T") ? toDate.split("T")[0] : toDate;
+      to = new Date(toDateStr);
     }
 
     // Get all expenses

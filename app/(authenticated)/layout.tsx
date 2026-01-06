@@ -16,7 +16,8 @@ import { usePathname } from "next/navigation";
 
 function HeaderContent() {
   const pathname = usePathname();
-  const isActive = pathname === "/" || pathname === "/expenses";
+  const isActive =
+    pathname === "/" || pathname === "/expenses" || pathname === "/reports";
   const { range, rangeCompare, setRange, setRangeCompare } = useDateRange();
 
   return (

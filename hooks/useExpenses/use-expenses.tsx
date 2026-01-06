@@ -23,12 +23,19 @@ interface UseExpensesParams {
 }
 
 async function fetchExpenses(params?: UseExpensesParams): Promise<Expense[]> {
+  const formatDateOnly = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const searchParams = new URLSearchParams();
   if (params?.fromDate) {
-    searchParams.append("from_date", params.fromDate.toISOString());
+    searchParams.append("from_date", formatDateOnly(params.fromDate));
   }
   if (params?.toDate) {
-    searchParams.append("to_date", params.toDate.toISOString());
+    searchParams.append("to_date", formatDateOnly(params.toDate));
   }
 
   const queryString = searchParams.toString();

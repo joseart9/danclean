@@ -33,9 +33,8 @@ export default function Home() {
         {/* Stats Overview */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           <StatCard
-            title="Ventas Totales"
+            title="Ingreso Bruto"
             value={data?.totalSales || 0}
-            description="Total en el período seleccionado"
             icon={DollarSign}
           />
           <StatCard
@@ -53,14 +52,12 @@ export default function Home() {
           <StatCard
             title="Total de Órdenes"
             value={data?.totalOrders || 0}
-            description="Órdenes en el período"
             icon={Receipt}
             isMoney={false}
           />
           <StatCard
             title="Ticket Promedio"
             value={data?.averageOrderValue || 0}
-            description="Por orden"
             icon={TrendingUp}
           />
         </div>

@@ -2,7 +2,9 @@ import { ColumnDef } from "@tanstack/react-table";
 import type { Expense } from "@/hooks/useExpenses";
 
 const formatDate = (date: Date | string) => {
+  // Format date in Monterrey timezone
   return new Intl.DateTimeFormat("es-MX", {
+    timeZone: "America/Monterrey",
     year: "numeric",
     month: "long",
     day: "numeric",
