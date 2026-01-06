@@ -33,14 +33,21 @@ export function SalesChart({ fromDate, toDate }: SalesChartProps) {
   }
 
   const chartData =
-    data?.dailySales.map((item) => ({
-      date: new Date(item.date).toLocaleDateString("es-ES", {
-        day: "2-digit",
-        month: "short",
-      }),
-      ventas: item.sales,
-      ordenes: item.orders,
-    })) || [];
+    data?.dailySales.map((item) => {
+      // Parse date string (YYYY-MM-DD) as local date, not UTC
+      // The date string represents a date in Monterrey timezone
+      const [year, month, day] = item.date.split("-").map(Number);
+      const localDate = new Date(year, month - 1, day);
+
+      return {
+        date: localDate.toLocaleDateString("es-ES", {
+          day: "2-digit",
+          month: "short",
+        }),
+        ventas: item.sales,
+        ordenes: item.orders,
+      };
+    }) || [];
 
   const chartConfig = {
     ventas: {

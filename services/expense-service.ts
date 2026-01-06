@@ -10,6 +10,9 @@ import { CreateExpenseInput, UpdateExpenseInput } from "@/validators/expense";
 // Context
 import { getUserId } from "@/lib/auth";
 
+// Utils
+import { dateStringToUTCRange } from "@/utils/timezone";
+
 export class ExpenseService {
   async createExpense(data: CreateExpenseInput) {
     // Get user ID
@@ -76,13 +79,16 @@ export class ExpenseService {
     if (fromDate || toDate) {
       where.createdAt = {};
       if (fromDate) {
-        where.createdAt.gte = fromDate;
+        // Convert local date to UTC range
+        const fromDateStr = fromDate.toISOString().split("T")[0];
+        const fromRange = dateStringToUTCRange(fromDateStr);
+        where.createdAt.gte = fromRange.start;
       }
       if (toDate) {
-        // Set to end of day
-        const endOfDay = new Date(toDate);
-        endOfDay.setHours(23, 59, 59, 999);
-        where.createdAt.lte = endOfDay;
+        // Convert local date to UTC range
+        const toDateStr = toDate.toISOString().split("T")[0];
+        const toRange = dateStringToUTCRange(toDateStr);
+        where.createdAt.lte = toRange.end;
       }
     }
 

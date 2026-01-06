@@ -4,6 +4,10 @@ import { AppError } from "@/errors";
 import { OrderPaymentMethod, OrderType } from "@/types/order";
 import { OrderStatus } from "@/generated/prisma/enums";
 import { expenseService } from "@/services/expense-service";
+import {
+  dateStringToUTCRange,
+  utcDateToLocalDateString,
+} from "@/utils/timezone";
 
 export async function GET(request: Request) {
   try {
@@ -18,10 +22,19 @@ export async function GET(request: Request) {
       );
     }
 
-    const from = new Date(fromDate);
-    const to = new Date(toDate);
-    // Set to end of day
-    to.setHours(23, 59, 59, 999);
+    // Parse date strings (should be in YYYY-MM-DD format from frontend)
+    // If it's an ISO string, extract just the date part
+    const fromDateStr = fromDate.includes("T")
+      ? fromDate.split("T")[0]
+      : fromDate;
+    const toDateStr = toDate.includes("T") ? toDate.split("T")[0] : toDate;
+
+    // Convert local date ranges (Monterrey timezone) to UTC ranges for querying
+    const fromRange = dateStringToUTCRange(fromDateStr);
+    const toRange = dateStringToUTCRange(toDateStr);
+
+    const from = fromRange.start;
+    const to = toRange.end;
 
     // Get all orders in date range (only main orders, not history versions)
     const orders = await prisma.order.findMany({
@@ -231,8 +244,9 @@ export async function GET(request: Request) {
     );
 
     // Get daily sales data for chart (divided by 2 for CLEANING)
+    // Group by local date in Monterrey timezone, not UTC
     const dailySales = orders.reduce((acc, order) => {
-      const dateKey = order.createdAt.toISOString().split("T")[0];
+      const dateKey = utcDateToLocalDateString(order.createdAt);
       if (!acc[dateKey]) {
         acc[dateKey] = { date: dateKey, sales: 0, orders: 0 };
       }
