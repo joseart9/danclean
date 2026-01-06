@@ -10,18 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import axios from "axios";
-
-const WHATSAPP_API_URL = process.env.NEXT_PUBLIC_WHATSAPP_API_URL || "";
-
-// WhatsApp API client with cookie support
-const whatsappApiClient = axios.create({
-  baseURL: WHATSAPP_API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  withCredentials: true, // Important for cookies to be sent
-});
+import { apiClient } from "@/lib/axios";
 
 interface QRResponse {
   status: string;
@@ -40,12 +29,12 @@ interface HealthResponse {
 }
 
 async function fetchQRCode(): Promise<QRResponse> {
-  const response = await whatsappApiClient.get<QRResponse>("/connect");
+  const response = await apiClient.get<QRResponse>("/api/whatsapp/connect");
   return response.data;
 }
 
 async function fetchHealth(): Promise<HealthResponse> {
-  const response = await whatsappApiClient.get<HealthResponse>("/health");
+  const response = await apiClient.get<HealthResponse>("/api/whatsapp/health");
   return response.data;
 }
 
