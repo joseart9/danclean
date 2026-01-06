@@ -76,14 +76,14 @@ export function CustomerCombobox({
                 {isLoading ? (
                   "Cargando..."
                 ) : (
-                  <div className="flex flex-col gap-2 py-2">
-                    <span className="text-sm text-muted-foreground">
+                  <div className="flex flex-col gap-2 py-2 px-2">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
                       No se encontraron clientes
                     </span>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full"
+                      className="w-full text-xs sm:text-sm"
                       onClick={() => {
                         setOpen(false);
                         setDialogOpen(true);

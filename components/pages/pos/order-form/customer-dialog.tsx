@@ -101,12 +101,17 @@ export function CustomerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Agregar Cliente</DialogTitle>
+      <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col">
+        <DialogHeader className="shrink-0">
+          <DialogTitle className="text-lg sm:text-xl">
+            Agregar Cliente
+          </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-3 md:space-y-4 py-4 overflow-y-auto flex-1 min-h-0"
+        >
           <Field>
             <FieldLabel
               htmlFor="name"
@@ -178,16 +183,21 @@ export function CustomerDialog({
             </FieldContent>
           </Field>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0 flex-col sm:flex-row gap-2 sm:gap-0">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
+              className="w-full sm:w-auto"
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full sm:w-auto"
+            >
               {isLoading ? (
                 <>
                   <Spinner />

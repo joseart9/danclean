@@ -105,9 +105,9 @@ function CleaningItemForm({ item, onUpdate, onRemove }: CleaningItemFormProps) {
   };
 
   return (
-    <div className="space-y-3 rounded-lg p-2 border border-border">
-      <div className="flex gap-2 items-end">
-        <Field className="flex-1">
+    <div className="space-y-2 md:space-y-3 rounded-lg p-2 md:p-3 border border-border">
+      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
+        <Field className="flex-1 min-w-0">
           <FieldContent>
             <Popover open={itemOpen} onOpenChange={setItemOpen}>
               <PopoverTrigger asChild>
@@ -115,9 +115,11 @@ function CleaningItemForm({ item, onUpdate, onRemove }: CleaningItemFormProps) {
                   variant="outline"
                   role="combobox"
                   aria-expanded={itemOpen}
-                  className="w-full justify-between"
+                  className="w-full justify-between text-sm sm:text-base"
                 >
-                  {selectedItem || "Seleccionar item..."}
+                  <span className="truncate">
+                    {selectedItem || "Seleccionar item..."}
+                  </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -160,8 +162,8 @@ function CleaningItemForm({ item, onUpdate, onRemove }: CleaningItemFormProps) {
           </FieldContent>
         </Field>
 
-        <Field className="w-32">
-          <FieldLabel>Cantidad</FieldLabel>
+        <Field className="w-full sm:w-28 md:w-32">
+          <FieldLabel className="text-xs sm:text-sm">Cantidad</FieldLabel>
           <FieldContent>
             <Select
               value={item.quantity.toString()}
@@ -186,6 +188,7 @@ function CleaningItemForm({ item, onUpdate, onRemove }: CleaningItemFormProps) {
           variant="outline"
           size="icon"
           onClick={() => onRemove(item.id)}
+          className="shrink-0 self-end sm:self-auto"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -195,22 +198,22 @@ function CleaningItemForm({ item, onUpdate, onRemove }: CleaningItemFormProps) {
         <Field>
           <FieldContent>
             {hasPriceRange ? (
-              <div className="space-y-3">
-                <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
+              <div className="space-y-2 md:space-y-3">
+                <div className="bg-muted/50 rounded-lg p-3 md:p-4 space-y-2 md:space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
                     <div className="flex flex-col gap-1">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
                         Precio seleccionado
                       </span>
-                      <span className="text-2xl font-bold text-foreground">
+                      <span className="text-xl sm:text-2xl font-bold text-foreground">
                         {formatCurrency(item.price)}
                       </span>
                     </div>
-                    <div className="text-right flex flex-col gap-1">
+                    <div className="text-left sm:text-right flex flex-col gap-1">
                       <span className="text-xs text-muted-foreground">
                         Rango disponible
                       </span>
-                      <span className="text-sm font-medium text-muted-foreground">
+                      <span className="text-xs sm:text-sm font-medium text-muted-foreground">
                         {formatCurrency(minPrice)} - {formatCurrency(maxPrice)}
                       </span>
                     </div>
@@ -224,7 +227,7 @@ function CleaningItemForm({ item, onUpdate, onRemove }: CleaningItemFormProps) {
                     className="w-full"
                   />
                 </div>
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 text-xs sm:text-sm">
                   <span className="text-muted-foreground">
                     {item.quantity} unidad{item.quantity > 1 ? "es" : ""} ×{" "}
                     {formatCurrency(item.price)}
@@ -235,21 +238,21 @@ function CleaningItemForm({ item, onUpdate, onRemove }: CleaningItemFormProps) {
                 </div>
               </div>
             ) : (
-              <div className="bg-muted/50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
+              <div className="bg-muted/50 rounded-lg p-3 md:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
                   <div className="flex flex-col gap-1">
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
                       Precio por unidad
                     </span>
-                    <span className="text-2xl font-bold text-foreground">
+                    <span className="text-xl sm:text-2xl font-bold text-foreground">
                       {formatCurrency(item.price)}
                     </span>
                   </div>
-                  <div className="text-right flex flex-col gap-1">
-                    <span className="text-sm text-muted-foreground">
+                  <div className="text-left sm:text-right flex flex-col gap-1">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
                       {item.quantity} unidad{item.quantity > 1 ? "es" : ""}
                     </span>
-                    <span className="text-lg font-semibold text-foreground">
+                    <span className="text-base sm:text-lg font-semibold text-foreground">
                       {formatCurrency(item.price * item.quantity)}
                     </span>
                   </div>
@@ -299,7 +302,7 @@ export function OrderForm() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-5 lg:space-y-6">
       {/* Customer Selection */}
       <Field>
         <FieldLabel required>Cliente</FieldLabel>
@@ -316,7 +319,7 @@ export function OrderForm() {
         <Field>
           <FieldLabel required>Tipo de Orden</FieldLabel>
           <FieldContent>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 type="button"
                 variant={
@@ -373,7 +376,7 @@ export function OrderForm() {
         <Field>
           <FieldLabel required>Prendas</FieldLabel>
           <FieldContent>
-            <div className="space-y-3">
+            <div className="space-y-2 md:space-y-3">
               {formData.cleaningItems.length === 0 ? (
                 <Button
                   type="button"
@@ -471,7 +474,7 @@ export function OrderForm() {
         ((formData.type === OrderType.IRONING && formData.ironingQuantity) ||
           (formData.type === OrderType.CLEANING &&
             formData.cleaningItems.length > 0)) && (
-          <div className="pt-4">
+          <div className="pt-2 md:pt-3 lg:pt-4">
             <Button
               type="button"
               onClick={() => setCompletionDialogOpen(true)}
