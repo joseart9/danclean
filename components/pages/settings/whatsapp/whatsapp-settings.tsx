@@ -14,6 +14,15 @@ import axios from "axios";
 
 const WHATSAPP_API_URL = process.env.NEXT_PUBLIC_WHATSAPP_API_URL || "";
 
+// Helper function to get cookie value
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
+  return null;
+}
+
 // WhatsApp API client with cookie support
 const whatsappApiClient = axios.create({
   baseURL: WHATSAPP_API_URL,
@@ -22,6 +31,36 @@ const whatsappApiClient = axios.create({
   },
   withCredentials: true, // Important for cookies to be sent
 });
+
+// Request interceptor to add token from cookie to headers
+whatsappApiClient.interceptors.request.use(
+  (config) => {
+    // Get token from cookie and add to headers
+    const token = getCookie("token");
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for handling errors
+whatsappApiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle 401 errors (unauthorized) - token expired or invalid
+    if (error.response?.status === 401) {
+      // Redirect to login if token is invalid
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 interface QRResponse {
   status: string;
