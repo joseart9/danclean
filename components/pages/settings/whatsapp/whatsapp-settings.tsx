@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Card,
@@ -13,7 +12,16 @@ import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import axios from "axios";
 
-const NEXT_PUBLIC_WHATSAPP_API_URL = process.env.NEXT_PUBLIC_WHATSAPP_API_URL;
+const WHATSAPP_API_URL = process.env.NEXT_PUBLIC_WHATSAPP_API_URL || "";
+
+// WhatsApp API client with cookie support
+const whatsappApiClient = axios.create({
+  baseURL: WHATSAPP_API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+  withCredentials: true, // Important for cookies to be sent
+});
 
 interface QRResponse {
   status: string;
@@ -32,30 +40,17 @@ interface HealthResponse {
 }
 
 async function fetchQRCode(): Promise<QRResponse> {
-  const response = await axios.get<QRResponse>(
-    `${NEXT_PUBLIC_WHATSAPP_API_URL}/connect`
-  );
+  const response = await whatsappApiClient.get<QRResponse>("/connect");
   return response.data;
 }
 
 async function fetchHealth(): Promise<HealthResponse> {
-  const response = await axios.get<HealthResponse>(
-    `${NEXT_PUBLIC_WHATSAPP_API_URL}/health`
-  );
+  const response = await whatsappApiClient.get<HealthResponse>("/health");
   return response.data;
 }
 
 export function WhatsAppSettings() {
-  const isDevelopment = useMemo(
-    () =>
-      process.env.NODE_ENV === "development" ||
-      (typeof window !== "undefined" &&
-        (window.location.hostname === "localhost" ||
-          window.location.hostname === "127.0.0.1")),
-    []
-  );
-
-  // Fetch QR code (development only)
+  // Fetch QR code
   const {
     data: qrData,
     isLoading: isLoadingQR,
@@ -65,7 +60,6 @@ export function WhatsAppSettings() {
   } = useQuery({
     queryKey: ["whatsapp-qr"],
     queryFn: fetchQRCode,
-    enabled: isDevelopment,
     refetchInterval: (query) => {
       // If QR is ready, stop polling. Otherwise, poll every 5 seconds
       const data = query.state.data;
@@ -136,77 +130,63 @@ export function WhatsAppSettings() {
         </CardContent>
       </Card>
 
-      {isDevelopment && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Código QR de Conexión</CardTitle>
-            <CardDescription>
-              Escanea este código QR con WhatsApp para conectar la sesión
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isLoadingQR ? (
-              <div className="flex items-center justify-center py-8">
-                <Spinner className="h-8 w-8" />
+      <Card>
+        <CardHeader>
+          <CardTitle>Código QR de Conexión</CardTitle>
+          <CardDescription>
+            Escanea este código QR con WhatsApp para conectar la sesión
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isLoadingQR ? (
+            <div className="flex items-center justify-center py-8">
+              <Spinner className="h-8 w-8" />
+            </div>
+          ) : isErrorQR ? (
+            <div className="space-y-2">
+              <div className="text-destructive">
+                Error al obtener el código QR:{" "}
+                {errorQR instanceof Error
+                  ? errorQR.message
+                  : "Error desconocido"}
               </div>
-            ) : isErrorQR ? (
-              <div className="space-y-2">
-                <div className="text-destructive">
-                  Error al obtener el código QR:{" "}
-                  {errorQR instanceof Error
-                    ? errorQR.message
-                    : "Error desconocido"}
-                </div>
+              <button
+                onClick={() => refetchQR()}
+                className="text-sm text-primary hover:underline"
+              >
+                Reintentar
+              </button>
+            </div>
+          ) : qrData?.qr ? (
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <img
+                  src={qrData.qr}
+                  alt="WhatsApp QR Code"
+                  className="max-w-xs rounded-lg border"
+                />
+              </div>
+              {qrData.message && (
+                <p className="text-center text-sm text-muted-foreground">
+                  {qrData.message}
+                </p>
+              )}
+              <div className="flex justify-center">
                 <button
                   onClick={() => refetchQR()}
                   className="text-sm text-primary hover:underline"
                 >
-                  Reintentar
+                  Actualizar código QR
                 </button>
               </div>
-            ) : qrData?.qr ? (
-              <div className="space-y-4">
-                <div className="flex justify-center">
-                  <img
-                    src={qrData.qr}
-                    alt="WhatsApp QR Code"
-                    className="max-w-xs rounded-lg border"
-                  />
-                </div>
-                {qrData.message && (
-                  <p className="text-center text-sm text-muted-foreground">
-                    {qrData.message}
-                  </p>
-                )}
-                <div className="flex justify-center">
-                  <button
-                    onClick={() => refetchQR()}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Actualizar código QR
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground">
-                No hay código QR disponible
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {!isDevelopment && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Configuración de WhatsApp</CardTitle>
-            <CardDescription>
-              La configuración de código QR solo está disponible en modo
-              desarrollo
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      )}
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground">
+              No hay código QR disponible
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
