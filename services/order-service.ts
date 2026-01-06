@@ -20,6 +20,7 @@ import { OrderType, OrderStatus } from "@/types/order";
 import { ironingItemService } from "./ironing-item-service";
 import { cleaningItemService } from "./cleaning-item-service";
 import { storageService } from "./storage-service";
+import { whatsappService } from "./whatsapp-service";
 
 // Context
 import { getUserId } from "@/lib/auth";
@@ -31,9 +32,38 @@ import {
   calculateGarmentCount,
 } from "@/utils";
 
+// Templates
+import {
+  getOrderCreatedMessage,
+  getOrderCompletedMessage,
+  getOrderDeliveredMessage,
+} from "@/templates/whatsapp";
+
 // Cleaning prices are now fetched from the database via cleaningItemOptions
 
 export class OrderService {
+  /**
+   * Helper method to send WhatsApp notification
+   * Silently fails if phone number is missing or message sending fails
+   */
+  private async sendWhatsAppNotification(
+    phone: string | null | undefined,
+    message: string
+  ) {
+    if (!phone) {
+      return; // No phone number, skip notification
+    }
+
+    try {
+      // Clean phone number (remove +, spaces, dashes, etc.)
+      const cleanPhone = phone.replace(/[\s+\-()]/g, "");
+      await whatsappService.sendMessage(cleanPhone, message);
+    } catch (error) {
+      // Silently fail - don't break order creation if WhatsApp fails
+      console.error("Failed to send WhatsApp notification:", error);
+    }
+  }
+
   /**
    * Helper method to get the latest version of an order
    * Given an order ID, finds the original order and returns the latest version
@@ -327,7 +357,32 @@ export class OrderService {
 
       // Enrich with actual items
       const enrichedOrders = await this.enrichOrdersWithItems([order!]);
-      return enrichedOrders[0];
+      const enrichedOrder = enrichedOrders[0];
+
+      // Send WhatsApp notification for order created
+      if (
+        enrichedOrder.customer &&
+        typeof enrichedOrder.customer === "object" &&
+        "name" in enrichedOrder.customer &&
+        "phone" in enrichedOrder.customer
+      ) {
+        const customer = enrichedOrder.customer as {
+          name: string;
+          phone: string;
+        };
+        const orderTypeText =
+          data.type === OrderType.IRONING ? "Planchado" : "Lavado";
+        const message = getOrderCreatedMessage({
+          customerName: customer.name,
+          orderNumber: enrichedOrder.orderNumber,
+          orderType: orderTypeText,
+          total: enrichedOrder.total,
+          totalPaid: enrichedOrder.totalPaid,
+        });
+        await this.sendWhatsAppNotification(customer.phone, message);
+      }
+
+      return enrichedOrder;
     }
 
     // Allocate storage and order number using the new system
@@ -397,7 +452,32 @@ export class OrderService {
 
     // Enrich with actual items
     const enrichedOrders = await this.enrichOrdersWithItems([order!]);
-    return enrichedOrders[0];
+    const enrichedOrder = enrichedOrders[0];
+
+    // Send WhatsApp notification for order created
+    if (
+      enrichedOrder.customer &&
+      typeof enrichedOrder.customer === "object" &&
+      "name" in enrichedOrder.customer &&
+      "phone" in enrichedOrder.customer
+    ) {
+      const customer = enrichedOrder.customer as {
+        name: string;
+        phone: string;
+      };
+      const orderTypeText =
+        data.type === OrderType.IRONING ? "Planchado" : "Lavado";
+      const message = getOrderCreatedMessage({
+        customerName: customer.name,
+        orderNumber: enrichedOrder.orderNumber,
+        orderType: orderTypeText,
+        total: enrichedOrder.total,
+        totalPaid: enrichedOrder.totalPaid,
+      });
+      await this.sendWhatsAppNotification(customer.phone, message);
+    }
+
+    return enrichedOrder;
   }
 
   async getOrderById(id: string) {
@@ -742,7 +822,51 @@ export class OrderService {
 
     // Enrich with actual items
     const enrichedOrders = await this.enrichOrdersWithItems([updatedOrder!]);
-    return enrichedOrders[0];
+    const enrichedOrder = enrichedOrders[0];
+
+    // Send WhatsApp notifications for status changes
+    if (
+      enrichedOrder.customer &&
+      typeof enrichedOrder.customer === "object" &&
+      "name" in enrichedOrder.customer &&
+      "phone" in enrichedOrder.customer
+    ) {
+      const customer = enrichedOrder.customer as {
+        name: string;
+        phone: string;
+      };
+      const oldStatus = latestOrder.status as OrderStatus;
+      const orderTypeText =
+        enrichedOrder.type === OrderType.IRONING ? "Planchado" : "Lavado";
+
+      // Check if status changed to COMPLETED
+      if (
+        oldStatus !== OrderStatus.COMPLETED &&
+        newStatus === OrderStatus.COMPLETED
+      ) {
+        const message = getOrderCompletedMessage({
+          customerName: customer.name,
+          orderNumber: enrichedOrder.orderNumber,
+          orderType: orderTypeText,
+        });
+        await this.sendWhatsAppNotification(customer.phone, message);
+      }
+
+      // Check if status changed to DELIVERED
+      if (
+        oldStatus !== OrderStatus.DELIVERED &&
+        newStatus === OrderStatus.DELIVERED
+      ) {
+        const message = getOrderDeliveredMessage({
+          customerName: customer.name,
+          orderNumber: enrichedOrder.orderNumber,
+          orderType: orderTypeText,
+        });
+        await this.sendWhatsAppNotification(customer.phone, message);
+      }
+    }
+
+    return enrichedOrder;
   }
 
   async deleteOrder(id: string) {
