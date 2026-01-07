@@ -12,7 +12,6 @@ import {
 import {
   paymentMethodLabels,
   paymentStatusLabels,
-  orderStatusLabels,
 } from "@/components/pages/orders/orders-table/utils/labels";
 import { Badge } from "@/components/ui/badge";
 import { translateOrderStatus } from "@/utils/translate-order-status";
@@ -27,7 +26,7 @@ export function OrderDisplay({ order }: OrderDisplayProps) {
 
   return (
     <div className="bg-card border rounded-lg p-6 space-y-6">
-      {/* Order Number and Storage ID - Most Important */}
+      {/* Ticket Number, Order Number and Storage ID - Most Important */}
       <div className="space-y-4">
         <div className="bg-primary/10 border-2 border-primary rounded-lg p-6 text-center">
           <div className="space-y-4">
@@ -131,6 +130,14 @@ export function OrderDisplay({ order }: OrderDisplayProps) {
             >
               {translateOrderStatus(order.status)}
             </Badge>
+          </FieldContent>
+        </Field>
+        <Field>
+          <FieldLabel className="text-sm text-muted-foreground">
+            Número de Ticket
+          </FieldLabel>
+          <FieldContent>
+            <p className="font-medium">{order.ticketNumber.toLocaleString()}</p>
           </FieldContent>
         </Field>
         <Field>

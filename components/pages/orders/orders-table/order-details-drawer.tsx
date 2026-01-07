@@ -63,6 +63,7 @@ export function OrderDetailsDrawer({
     paymentStatus: OrderPaymentStatus.PENDING,
     paymentMethod: OrderPaymentMethod.CASH,
     totalPaid: 0,
+    ticketNumber: 0,
   });
 
   // Fetch full order details when drawer opens
@@ -80,6 +81,7 @@ export function OrderDetailsDrawer({
             paymentStatus: response.data.paymentStatus,
             paymentMethod: response.data.paymentMethod,
             totalPaid: response.data.totalPaid,
+            ticketNumber: response.data.ticketNumber,
           });
         })
         .catch((error) => {
@@ -108,6 +110,7 @@ export function OrderDetailsDrawer({
         paymentStatus: fullOrder.paymentStatus,
         paymentMethod: fullOrder.paymentMethod,
         totalPaid: fullOrder.totalPaid,
+        ticketNumber: fullOrder.ticketNumber,
       });
       setIsEditing(false);
     }
@@ -132,6 +135,7 @@ export function OrderDetailsDrawer({
           paymentStatus: formData.paymentStatus,
           paymentMethod: formData.paymentMethod,
           totalPaid: formData.totalPaid,
+          ticketNumber: formData.ticketNumber,
         }
       );
 
@@ -160,6 +164,7 @@ export function OrderDetailsDrawer({
         paymentStatus: displayOrder.paymentStatus,
         paymentMethod: displayOrder.paymentMethod,
         totalPaid: displayOrder.totalPaid,
+        ticketNumber: displayOrder.ticketNumber,
       });
     }
     setIsEditing(false);
@@ -220,6 +225,31 @@ export function OrderDetailsDrawer({
                       <p className="font-medium text-lg">
                         {displayOrder.orderNumber}
                       </p>
+                    </FieldContent>
+                  </Field>
+                  <Field>
+                    <FieldLabel className="text-sm text-muted-foreground">
+                      Número de Ticket
+                    </FieldLabel>
+                    <FieldContent>
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          min="0"
+                          value={formData.ticketNumber}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              ticketNumber: parseInt(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="0"
+                        />
+                      ) : (
+                        <p className="font-medium text-lg">
+                          {displayOrder.ticketNumber.toLocaleString()}
+                        </p>
+                      )}
                     </FieldContent>
                   </Field>
                   <Field>

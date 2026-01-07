@@ -67,6 +67,7 @@ export interface Order {
   total: number;
   totalPaid: number;
   orderNumber: number;
+  ticketNumber: number;
   storageId: string | null;
   mainOrderId: string | null;
   createdBy: string;

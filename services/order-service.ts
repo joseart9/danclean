@@ -43,6 +43,43 @@ import {
 
 export class OrderService {
   /**
+   * Gets the next ticket number starting from 10450
+   * Only generates new ticket numbers for main orders (new orders, not updates)
+   * @param tx - Prisma transaction client (optional, for transaction-safe generation)
+   * @returns Next ticket number
+   */
+  private async getNextTicketNumber(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tx?: any // Prisma transaction client - type will be available after prisma generate
+  ) {
+    const client = tx || prisma;
+    const STARTING_TICKET_NUMBER = 10450;
+
+    // Get the maximum ticket number from all orders
+    const result = await client.order.findFirst({
+      where: {
+        ticketNumber: {
+          gte: STARTING_TICKET_NUMBER,
+        },
+      },
+      orderBy: {
+        ticketNumber: "desc",
+      },
+      select: {
+        ticketNumber: true,
+      },
+    });
+
+    // If no tickets exist or max is less than starting number, return starting number
+    if (!result || result.ticketNumber < STARTING_TICKET_NUMBER) {
+      return STARTING_TICKET_NUMBER;
+    }
+
+    // Return next ticket number
+    return result.ticketNumber + 1;
+  }
+
+  /**
    * Helper method to send WhatsApp notification
    * Silently fails if phone number is missing or message sending fails
    */
@@ -313,6 +350,20 @@ export class OrderService {
     // Allocate storage and order number if not explicitly provided
     if (data.orderNumber !== undefined) {
       // Use provided order number (for backward compatibility or special cases)
+      // Generate ticket number only for new orders (when mainOrderId is null/undefined)
+      let ticketNumber = 0;
+      if (data.mainOrderId === null || data.mainOrderId === undefined) {
+        // New order - generate new ticket number
+        ticketNumber = await this.getNextTicketNumber();
+      } else {
+        // Update to existing order - preserve ticket number from original
+        const originalOrder = await prisma.order.findUnique({
+          where: { id: data.mainOrderId },
+          select: { ticketNumber: true },
+        });
+        ticketNumber = originalOrder?.ticketNumber ?? 0;
+      }
+
       // Create order with provided number
       const newOrder = await prisma.order.create({
         data: {
@@ -325,6 +376,7 @@ export class OrderService {
           totalPaid: data.totalPaid ?? 0,
           paid: data.paid ?? data.totalPaid ?? 0,
           orderNumber: data.orderNumber,
+          ticketNumber: ticketNumber,
           storageId: null,
           userId: userId,
           mainOrderId: data.mainOrderId,
@@ -388,6 +440,12 @@ export class OrderService {
     // Allocate storage and order number using the new system
     // Do everything in a single transaction
     const result = await prisma.$transaction(async (tx) => {
+      // Generate ticket number only for new orders (when mainOrderId is null/undefined)
+      const ticketNumber =
+        data.mainOrderId === null || data.mainOrderId === undefined
+          ? await this.getNextTicketNumber(tx)
+          : 0; // Placeholder, will be set from original order if updating
+
       // Create order first with a placeholder number
       const tempOrder = await tx.order.create({
         data: {
@@ -400,6 +458,7 @@ export class OrderService {
           totalPaid: data.totalPaid ?? 0,
           paid: data.paid ?? data.totalPaid ?? 0,
           orderNumber: 0, // Temporary placeholder
+          ticketNumber: ticketNumber,
           userId: userId,
           mainOrderId: data.mainOrderId,
           isMainOrder: !data.mainOrderId, // Main order only if no mainOrderId
@@ -760,7 +819,7 @@ export class OrderService {
     });
 
     // Create a new order record with updated data
-    // Keep the same orderNumber, total, and items
+    // Keep the same orderNumber, ticketNumber, total, and items
     const newOrder = await prisma.order.create({
       data: {
         type: latestOrder.type,
@@ -772,6 +831,7 @@ export class OrderService {
         totalPaid: data.totalPaid ?? latestOrder.totalPaid,
         paid: data.paid ?? latestOrder.paid,
         orderNumber: latestOrder.orderNumber, // Keep the same order number
+        ticketNumber: data.ticketNumber ?? latestOrder.ticketNumber, // Use updated ticket number or keep the same
         storageId: latestOrder.storageId, // Keep the same storage
         mainOrderId: originalOrderId, // Link to the original order
         isMainOrder: true, // This is now the main order

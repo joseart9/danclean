@@ -29,6 +29,25 @@ const getItemQuantity = (order: FullOrder): number => {
 
 export const columns: ColumnDef<FullOrder>[] = [
   {
+    accessorKey: "type",
+    header: "Servicio",
+    cell: ({ row }) => {
+      const type = row.original.type;
+      return (
+        <div className="capitalize">
+          {type === OrderType.IRONING ? "PLANCHA" : "TINTORERIA"}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "ticketNumber",
+    header: "# Ticket",
+    cell: ({ row }) => {
+      return <div className="font-medium">{row.original.ticketNumber}</div>;
+    },
+  },
+  {
     accessorKey: "orderNumber",
     header: "# Orden",
     cell: ({ row }) => {
@@ -45,14 +64,7 @@ export const columns: ColumnDef<FullOrder>[] = [
       return <div>{fullName}</div>;
     },
   },
-  {
-    id: "customerPhone",
-    header: "Telefono",
-    accessorFn: (row) => row.customer.phone,
-    cell: ({ row }) => {
-      return <div>{row.original.customer.phone}</div>;
-    },
-  },
+
   {
     accessorKey: "total",
     header: "Total",
@@ -69,18 +81,6 @@ export const columns: ColumnDef<FullOrder>[] = [
       return (
         <div className="font-medium">
           {formatCurrency(row.original.totalPaid)}
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "type",
-    header: "Servicio",
-    cell: ({ row }) => {
-      const type = row.original.type;
-      return (
-        <div className="capitalize">
-          {type === OrderType.IRONING ? "PLANCHA" : "TINTORERIA"}
         </div>
       );
     },
