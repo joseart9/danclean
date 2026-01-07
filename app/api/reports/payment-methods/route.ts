@@ -53,7 +53,7 @@ export async function GET(request: Request) {
         const method = order.paymentMethod;
         if (!acc[method]) {
           acc[method] = {
-            paymentMethod: method,
+            paymentMethod: method as OrderPaymentMethod,
             orders: [],
             totalAmount: 0,
             orderCount: 0,
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
         acc[method].orders.push({
           id: order.id,
           client: `${order.customer.name} ${order.customer.lastName}`,
-          orderType: order.type,
+          orderType: order.type as OrderType,
           orderTotal: adjustedTotal,
           createdAt: order.createdAt,
         });
