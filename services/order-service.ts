@@ -53,7 +53,7 @@ export class OrderService {
     tx?: any // Prisma transaction client - type will be available after prisma generate
   ) {
     const client = tx || prisma;
-    const STARTING_TICKET_NUMBER = 10450;
+    const STARTING_TICKET_NUMBER = 31001;
 
     // Get the maximum ticket number from all orders
     const result = await client.order.findFirst({
