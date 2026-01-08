@@ -356,7 +356,7 @@ export function OrderForm({ date }: { date: Date }) {
                 <SelectValue placeholder="Seleccionar cantidad..." />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 50 }, (_, i) => i + 1).map((num) => (
+                {Array.from({ length: 70 }, (_, i) => i + 1).map((num) => (
                   <SelectItem key={num} value={num.toString()}>
                     {num}
                   </SelectItem>
