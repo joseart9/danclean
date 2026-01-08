@@ -3,6 +3,7 @@ export interface Expense {
   name: string;
   amount: number;
   userId: string;
+  timestamp: Date;
   createdAt: Date;
   updatedAt: Date;
   user: {

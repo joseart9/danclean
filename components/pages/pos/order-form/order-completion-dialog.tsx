@@ -23,6 +23,7 @@ import {
 } from "@/types/order";
 import type { OrderFormData } from "./order-form-context";
 import { useQueryClient } from "@tanstack/react-query";
+import { useDateRange } from "@/providers/date-range-provider";
 
 interface OrderCompletionDialogProps {
   open: boolean;
@@ -30,6 +31,7 @@ interface OrderCompletionDialogProps {
   formData: OrderFormData;
   total: number;
   onOrderCompleted: () => void;
+  date: Date;
 }
 
 const paymentMethodLabels: Record<OrderPaymentMethod, string> = {
@@ -44,7 +46,9 @@ export function OrderCompletionDialog({
   formData,
   total,
   onOrderCompleted,
+  date,
 }: OrderCompletionDialogProps) {
+  const { range } = useDateRange();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [amountPaid, setAmountPaid] = useState<string>("");
@@ -114,6 +118,7 @@ export function OrderCompletionDialog({
         status: "PENDING",
         totalPaid: actualAmountPaid,
         paid: actualAmountPaid,
+        timestamp: date,
       };
 
       // Add items based on type

@@ -116,6 +116,7 @@ model Order {
   userId        String             @map("user_id")
   isMainOrder   Boolean            @default(true) @map("is_main_order")
   ticketNumber  Int                @map("ticket_number") @default(0)
+  timestamp     DateTime           @default(now()) @map("timestamp")
   orderItems    OrderItem[]
   customer      Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
   mainOrder     Order?             @relation("MainOrder", fields: [mainOrderId], references: [id], onDelete: Cascade)
@@ -142,6 +143,7 @@ model Expense {
   name      String   @map("name")
   amount    Float    @map("amount")
   userId    String   @map("user_id")
+  timestamp DateTime @default(now()) @map("timestamp")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

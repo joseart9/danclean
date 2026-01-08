@@ -31,7 +31,6 @@ import { OrderCompletionDialog } from "./order-completion-dialog";
 import { useCleaningItemOptions } from "@/hooks/useCleaningItemOptions";
 import { CommandInput, CommandEmpty } from "@/components/ui/command";
 import { Slider } from "@/components/ui/slider";
-import { Separator } from "@/components/ui/separator";
 
 interface CleaningItemFormProps {
   item: { id: string; item_name: string; quantity: number; price: number };
@@ -263,7 +262,7 @@ function CleaningItemForm({ item, onUpdate, onRemove }: CleaningItemFormProps) {
   );
 }
 
-export function OrderForm() {
+export function OrderForm({ date }: { date: Date }) {
   const {
     formData,
     setCustomer,
@@ -490,6 +489,7 @@ export function OrderForm() {
         formData={formData}
         total={calculateTotal()}
         onOrderCompleted={resetForm}
+        date={date}
       />
     </div>
   );

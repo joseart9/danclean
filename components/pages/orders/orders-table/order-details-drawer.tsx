@@ -216,7 +216,7 @@ export function OrderDetailsDrawer({
                 <h3 className="text-lg font-semibold">
                   Información de la Orden
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-3 flex flex-row gap-3">
                   <Field>
                     <FieldLabel className="text-sm text-muted-foreground">
                       Número de Orden
@@ -265,6 +265,16 @@ export function OrderDetailsDrawer({
                     </FieldContent>
                   </Field>
                 </div>
+                <Field>
+                  <FieldLabel className="text-sm text-muted-foreground">
+                    Fecha de emisión
+                  </FieldLabel>
+                  <FieldContent>
+                    <p className="font-medium">
+                      {formatDate(displayOrder.timestamp)}
+                    </p>
+                  </FieldContent>
+                </Field>
               </div>
 
               <Separator />
@@ -281,12 +291,9 @@ export function OrderDetailsDrawer({
                       />
                     ) : (
                       <div className="space-y-2">
-                        <p className="font-medium">
+                        <p className="font-medium text-muted-foreground">
                           {displayOrder.customer.name}{" "}
                           {displayOrder.customer.lastName}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {displayOrder.customer.phone}
                         </p>
                         {displayOrder.customer.address && (
                           <p className="text-sm text-muted-foreground">
@@ -304,7 +311,7 @@ export function OrderDetailsDrawer({
               {/* Estado de la Orden */}
               <div className="flex flex-col gap-3">
                 <h3 className="text-lg font-semibold">Estado de la Orden</h3>
-                <div className="space-y-3">
+                <div className="space-y-3 flex flex-row gap-3">
                   <Field>
                     <FieldLabel className="text-sm text-muted-foreground">
                       Estatus
@@ -381,127 +388,132 @@ export function OrderDetailsDrawer({
               {/* Información de Pago */}
               <div className="flex flex-col gap-3">
                 <h3 className="text-lg font-semibold">Información de Pago</h3>
-                <div className="space-y-3">
-                  <Field>
-                    <FieldLabel className="text-sm text-muted-foreground">
-                      Método de Pago
-                    </FieldLabel>
-                    <FieldContent>
-                      {isEditing ? (
-                        <Select
-                          value={formData.paymentMethod}
-                          onValueChange={(value) =>
-                            setFormData({
-                              ...formData,
-                              paymentMethod: value as OrderPaymentMethod,
-                            })
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(paymentMethodLabels).map(
-                              ([value, label]) => (
-                                <SelectItem key={value} value={value}>
-                                  {label}
-                                </SelectItem>
-                              )
-                            )}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <p className="font-medium">
-                          {paymentMethodLabels[displayOrder.paymentMethod]}
-                        </p>
-                      )}
-                    </FieldContent>
-                  </Field>
-                  <Field>
-                    <FieldLabel className="text-sm text-muted-foreground">
-                      Estado de Pago
-                    </FieldLabel>
-                    <FieldContent>
-                      {isEditing ? (
-                        <Select
-                          value={formData.paymentStatus}
-                          onValueChange={(value) =>
-                            setFormData({
-                              ...formData,
-                              paymentStatus: value as OrderPaymentStatus,
-                            })
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(paymentStatusLabels).map(
-                              ([value, label]) => (
-                                <SelectItem key={value} value={value}>
-                                  {label}
-                                </SelectItem>
-                              )
-                            )}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <p className="font-medium">
-                          {paymentStatusLabels[displayOrder.paymentStatus]}
-                        </p>
-                      )}
-                    </FieldContent>
-                  </Field>
-                  <Field>
-                    <FieldLabel className="text-sm text-muted-foreground">
-                      Total
-                    </FieldLabel>
-                    <FieldContent>
-                      <p className="text-lg font-bold">
-                        {formatCurrency(displayOrder.total)}
-                      </p>
-                    </FieldContent>
-                  </Field>
-                  <Field>
-                    <FieldLabel className="text-sm text-muted-foreground">
-                      Total Pagado
-                    </FieldLabel>
-                    <FieldContent>
-                      {isEditing ? (
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={formData.totalPaid}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              totalPaid: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                          placeholder="0"
-                        />
-                      ) : (
-                        <p className="text-lg font-bold">
-                          {formatCurrency(displayOrder.totalPaid)}
-                        </p>
-                      )}
-                    </FieldContent>
-                  </Field>
-                  {formData.totalPaid < displayOrder.total && (
+                <div className="space-y-6">
+                  <div className="flex flex-col gap-6">
                     <Field>
                       <FieldLabel className="text-sm text-muted-foreground">
-                        Pendiente
+                        Método de Pago
                       </FieldLabel>
                       <FieldContent>
-                        <p className="text-lg font-bold text-orange-600">
-                          {formatCurrency(
-                            displayOrder.total - formData.totalPaid
-                          )}
+                        {isEditing ? (
+                          <Select
+                            value={formData.paymentMethod}
+                            onValueChange={(value) =>
+                              setFormData({
+                                ...formData,
+                                paymentMethod: value as OrderPaymentMethod,
+                              })
+                            }
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(paymentMethodLabels).map(
+                                ([value, label]) => (
+                                  <SelectItem key={value} value={value}>
+                                    {label}
+                                  </SelectItem>
+                                )
+                              )}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <p className="font-medium">
+                            {paymentMethodLabels[displayOrder.paymentMethod]}
+                          </p>
+                        )}
+                      </FieldContent>
+                    </Field>
+                    <Field>
+                      <FieldLabel className="text-sm text-muted-foreground">
+                        Estado de Pago
+                      </FieldLabel>
+                      <FieldContent>
+                        {isEditing ? (
+                          <Select
+                            value={formData.paymentStatus}
+                            onValueChange={(value) =>
+                              setFormData({
+                                ...formData,
+                                paymentStatus: value as OrderPaymentStatus,
+                              })
+                            }
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(paymentStatusLabels).map(
+                                ([value, label]) => (
+                                  <SelectItem key={value} value={value}>
+                                    {label}
+                                  </SelectItem>
+                                )
+                              )}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <p className="font-medium">
+                            {paymentStatusLabels[displayOrder.paymentStatus]}
+                          </p>
+                        )}
+                      </FieldContent>
+                    </Field>
+                  </div>
+
+                  <div className="flex flex-row gap-3">
+                    <Field>
+                      <FieldLabel className="text-sm text-muted-foreground">
+                        Total
+                      </FieldLabel>
+                      <FieldContent>
+                        <p className="text-lg font-bold">
+                          {formatCurrency(displayOrder.total)}
                         </p>
                       </FieldContent>
                     </Field>
-                  )}
+                    <Field>
+                      <FieldLabel className="text-sm text-muted-foreground">
+                        Total Pagado
+                      </FieldLabel>
+                      <FieldContent>
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formData.totalPaid}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                totalPaid: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            placeholder="0"
+                          />
+                        ) : (
+                          <p className="text-lg font-bold">
+                            {formatCurrency(displayOrder.totalPaid)}
+                          </p>
+                        )}
+                      </FieldContent>
+                    </Field>
+                    {formData.totalPaid < displayOrder.total && (
+                      <Field>
+                        <FieldLabel className="text-sm text-muted-foreground">
+                          Pendiente
+                        </FieldLabel>
+                        <FieldContent>
+                          <p className="text-lg font-bold text-orange-600">
+                            {formatCurrency(
+                              displayOrder.total - formData.totalPaid
+                            )}
+                          </p>
+                        </FieldContent>
+                      </Field>
+                    )}
+                  </div>
                 </div>
               </div>
 

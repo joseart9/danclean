@@ -2,11 +2,11 @@
 
 import { OrderForm } from "@/components/pages/pos/order-form";
 
-export const IroningComponent = () => {
+export const IroningComponent = ({ date }: { date: Date }) => {
   return (
     <div className="bg-card rounded-lg p-6 h-full">
-      <h1 className="text-2xl font-bold mb-6">Punto de Venta</h1>
-      <OrderForm />
+      <h1 className="text-xl font-bold mb-6">Punto de Venta</h1>
+      <OrderForm date={date} />
     </div>
   );
 };

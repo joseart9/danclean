@@ -18,11 +18,13 @@ export const paymentStatusLabels: Record<OrderPaymentStatus, string> = {
   [OrderPaymentStatus.REFUNDED]: "Reembolsado",
 };
 
-export const orderStatusLabels: Record<OrderStatus, string> = {
+export const orderStatusLabels: Record<
+  Exclude<OrderStatus, "DELIVERED">,
+  string
+> = {
   [OrderStatus.PENDING]: "Pendiente",
   [OrderStatus.COMPLETED]: "Completado",
   [OrderStatus.CANCELLED]: "Cancelado",
   [OrderStatus.DAMAGED]: "Dañado",
   [OrderStatus.LOST]: "Perdido",
-  [OrderStatus.DELIVERED]: "Entregado",
 };

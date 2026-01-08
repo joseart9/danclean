@@ -41,6 +41,7 @@ export const createOrderSchema = z
       .number()
       .nonnegative("El monto pagado no puede ser negativo")
       .default(0),
+    timestamp: z.date(),
   })
   .and(
     z.union([
@@ -80,6 +81,7 @@ export const updateOrderSchema = z.object({
     .int()
     .nonnegative("El número de ticket debe ser no negativo")
     .optional(),
+  timestamp: z.date().optional(),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
