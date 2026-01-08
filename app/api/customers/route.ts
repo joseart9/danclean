@@ -48,12 +48,22 @@ export async function GET(request: Request) {
     // Try to search by name if provided
     const { searchParams } = new URL(request.url);
     const name = searchParams.get("name");
+    const limitParam = searchParams.get("limit");
+    const skipParam = searchParams.get("skip");
+
+    const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+    const skip = skipParam ? parseInt(skipParam, 10) : undefined;
+
     if (name) {
-      const customers = await customerService.getCustomersByName(name);
+      const customers = await customerService.getCustomersByName(
+        name,
+        limit,
+        skip
+      );
       return NextResponse.json(customers, { status: 200 });
     }
-    // Get all customers
-    const customers = await customerService.getAllCustomers();
+    // Get all customers with pagination
+    const customers = await customerService.getAllCustomers(limit, skip);
 
     return NextResponse.json(customers, { status: 200 });
   } catch (error) {

@@ -21,6 +21,7 @@ import {
 import { useCustomers } from "@/hooks/useCustomers";
 import type { Customer } from "@/types/customer";
 import { CustomerDialog } from "./customer-dialog";
+import { Spinner } from "@/components/ui/spinner";
 
 interface CustomerComboboxProps {
   value?: Customer | null;
@@ -35,10 +36,18 @@ export function CustomerCombobox({
   const [searchQuery, setSearchQuery] = React.useState("");
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const queryClient = useQueryClient();
+  const listRef = React.useRef<HTMLDivElement>(null);
 
-  const { customers, isLoading } = useCustomers({
+  const {
+    customers,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useCustomers({
     searchQuery: searchQuery || undefined,
     enabled: open,
+    limit: 10,
   });
 
   const handleCustomerCreated = (customer: Customer) => {
@@ -47,6 +56,28 @@ export function CustomerCombobox({
     onValueChange(customer);
     setDialogOpen(false);
   };
+
+  // Handle infinite scroll
+  React.useEffect(() => {
+    const listElement = listRef.current;
+    if (!listElement || !open) return;
+
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const { scrollTop, scrollHeight, clientHeight } = target;
+      // Load more when user is near the bottom (within 50px)
+      if (
+        scrollHeight - scrollTop - clientHeight < 50 &&
+        hasNextPage &&
+        !isFetchingNextPage
+      ) {
+        fetchNextPage();
+      }
+    };
+
+    listElement.addEventListener("scroll", handleScroll);
+    return () => listElement.removeEventListener("scroll", handleScroll);
+  }, [open, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <>
@@ -71,30 +102,19 @@ export function CustomerCombobox({
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
-            <CommandList>
-              <CommandEmpty>
-                {isLoading ? (
-                  "Cargando..."
-                ) : (
-                  <div className="flex flex-col gap-2 py-2">
-                    <span className="text-sm text-muted-foreground">
-                      No se encontraron clientes
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        setOpen(false);
-                        setDialogOpen(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Agregar cliente
-                    </Button>
-                  </div>
-                )}
-              </CommandEmpty>
+            <CommandList ref={listRef}>
+              <CommandGroup>
+                <CommandItem
+                  onSelect={() => {
+                    setOpen(false);
+                    setDialogOpen(true);
+                  }}
+                  className="text-primary font-medium"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar cliente
+                </CommandItem>
+              </CommandGroup>
               <CommandGroup>
                 {customers.map((customer) => (
                   <CommandItem
@@ -115,17 +135,27 @@ export function CustomerCombobox({
                     {customer.name} {customer.lastName}
                   </CommandItem>
                 ))}
-                <CommandItem
-                  onSelect={() => {
-                    setOpen(false);
-                    setDialogOpen(true);
-                  }}
-                  className="text-primary"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Agregar cliente
-                </CommandItem>
+                {isFetchingNextPage && (
+                  <CommandItem disabled>
+                    <Spinner className="h-4 w-4 mr-2" />
+                    Cargando más...
+                  </CommandItem>
+                )}
               </CommandGroup>
+              <CommandEmpty>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Spinner className="h-4 w-4 mr-2" />
+                    Cargando...
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2 py-2">
+                    <span className="text-sm text-muted-foreground text-center">
+                      No se encontraron clientes
+                    </span>
+                  </div>
+                )}
+              </CommandEmpty>
             </CommandList>
           </Command>
         </PopoverContent>

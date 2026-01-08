@@ -43,12 +43,14 @@ export class CustomerService {
     return customer;
   }
 
-  async getAllCustomers() {
-    // Get all customers
+  async getAllCustomers(limit?: number, skip?: number) {
+    // Get all customers with pagination
     const customers = await prisma.customer.findMany({
       orderBy: {
         createdAt: "desc",
       },
+      take: limit,
+      skip: skip,
     });
 
     return customers;
@@ -88,10 +90,12 @@ export class CustomerService {
     await prisma.customer.delete({ where: { id } });
   }
 
-  async getCustomersByName(name: string) {
-    // Get customers by name
+  async getCustomersByName(name: string, limit?: number, skip?: number) {
+    // Get customers by name with pagination
     const customers = await prisma.customer.findMany({
       where: { name: { contains: name, mode: "insensitive" } },
+      take: limit,
+      skip: skip,
     });
 
     return customers;
