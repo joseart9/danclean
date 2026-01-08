@@ -43,9 +43,13 @@ export async function PATCH(
   try {
     const { id } = await params;
     const data = await request.json();
+    const timestamp = new Date(data.timestamp);
 
     // Validate request body
-    const validatedData = updateOrderSchema.parse(data);
+    const validatedData = updateOrderSchema.parse({
+      ...data,
+      timestamp,
+    });
 
     // Update order
     const updatedOrder = await orderService.updateOrder(id, validatedData);

@@ -30,6 +30,7 @@ interface OrderCompletionDialogProps {
   formData: OrderFormData;
   total: number;
   onOrderCompleted: () => void;
+  date: Date;
 }
 
 const paymentMethodLabels: Record<OrderPaymentMethod, string> = {
@@ -44,6 +45,7 @@ export function OrderCompletionDialog({
   formData,
   total,
   onOrderCompleted,
+  date,
 }: OrderCompletionDialogProps) {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
@@ -114,6 +116,7 @@ export function OrderCompletionDialog({
         status: "PENDING",
         totalPaid: actualAmountPaid,
         paid: actualAmountPaid,
+        timestamp: date,
       };
 
       // Add items based on type

@@ -71,6 +71,7 @@ export interface Order {
   storageId: string | null;
   mainOrderId: string | null;
   createdBy: string;
+  timestamp: Date;
   createdAt: Date;
   updatedAt: Date;
 }

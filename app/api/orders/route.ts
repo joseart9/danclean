@@ -21,8 +21,10 @@ export async function POST(request: Request) {
     delete mappedData.payment_method;
     delete mappedData.total_paid;
 
+    const timestamp = new Date(mappedData.timestamp);
+
     // Validate request body
-    const validatedData = createOrderSchema.parse(mappedData);
+    const validatedData = createOrderSchema.parse({ ...mappedData, timestamp });
 
     // Create order
     const order = await orderService.createOrder(validatedData);

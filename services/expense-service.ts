@@ -28,6 +28,7 @@ export class ExpenseService {
         name: data.name,
         amount: data.amount,
         userId: userId,
+        timestamp: data.timestamp,
       },
       include: {
         user: {
@@ -70,25 +71,25 @@ export class ExpenseService {
 
   async getAllExpenses(fromDate?: Date, toDate?: Date) {
     const where: {
-      createdAt?: {
+      timestamp?: {
         gte?: Date;
         lte?: Date;
       };
     } = {};
 
     if (fromDate || toDate) {
-      where.createdAt = {};
+      where.timestamp = {};
       if (fromDate) {
         // Convert local date to UTC range
         const fromDateStr = fromDate.toISOString().split("T")[0];
         const fromRange = dateStringToUTCRange(fromDateStr);
-        where.createdAt.gte = fromRange.start;
+        where.timestamp.gte = fromRange.start;
       }
       if (toDate) {
         // Convert local date to UTC range
         const toDateStr = toDate.toISOString().split("T")[0];
         const toRange = dateStringToUTCRange(toDateStr);
-        where.createdAt.lte = toRange.end;
+        where.timestamp.lte = toRange.end;
       }
     }
 
@@ -106,7 +107,7 @@ export class ExpenseService {
         },
       },
       orderBy: {
-        createdAt: "desc",
+        timestamp: "desc",
       },
     });
 

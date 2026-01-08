@@ -381,6 +381,7 @@ export class OrderService {
           userId: userId,
           mainOrderId: data.mainOrderId,
           isMainOrder: !data.mainOrderId, // Main order only if no mainOrderId
+          timestamp: data.timestamp,
         },
       });
 
@@ -423,7 +424,7 @@ export class OrderService {
           phone: string;
         };
         const orderTypeText =
-          data.type === OrderType.IRONING ? "Planchado" : "Lavado";
+          data.type === OrderType.IRONING ? "Planchado" : "Tintorería";
         const message = getOrderCreatedMessage({
           customerName: customer.name,
           orderNumber: enrichedOrder.orderNumber,
@@ -463,6 +464,7 @@ export class OrderService {
           mainOrderId: data.mainOrderId,
           isMainOrder: !data.mainOrderId, // Main order only if no mainOrderId
           storageId: null, // Will be set after allocation
+          timestamp: data.timestamp,
         },
       });
 
@@ -525,7 +527,7 @@ export class OrderService {
         phone: string;
       };
       const orderTypeText =
-        data.type === OrderType.IRONING ? "Planchado" : "Lavado";
+        data.type === OrderType.IRONING ? "Planchado" : "Tintorería";
       const message = getOrderCreatedMessage({
         customerName: customer.name,
         orderNumber: enrichedOrder.orderNumber,
@@ -829,13 +831,14 @@ export class OrderService {
         status: newStatus,
         total: latestOrder.total, // Keep the same total
         totalPaid: data.totalPaid ?? latestOrder.totalPaid,
-        paid: data.paid ?? latestOrder.paid,
+        paid: data.paid,
         orderNumber: latestOrder.orderNumber, // Keep the same order number
         ticketNumber: data.ticketNumber ?? latestOrder.ticketNumber, // Use updated ticket number or keep the same
         storageId: latestOrder.storageId, // Keep the same storage
         mainOrderId: originalOrderId, // Link to the original order
         isMainOrder: true, // This is now the main order
         userId: userId,
+        timestamp: data.timestamp ?? latestOrder.timestamp,
       },
     });
 
