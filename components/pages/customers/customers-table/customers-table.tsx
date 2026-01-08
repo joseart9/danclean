@@ -11,12 +11,24 @@ interface CustomersTableProps {
   customers: Customer[];
   isLoading: boolean;
   onCustomersChange?: () => void;
+  onSearchChange?: (searchQuery: string) => void;
+  page?: number;
+  total?: number;
+  totalPages?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export function CustomersTable({
   customers,
   isLoading,
   onCustomersChange,
+  onSearchChange,
+  page = 0,
+  total = 0,
+  totalPages = 1,
+  pageSize = 10,
+  onPageChange,
 }: CustomersTableProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
@@ -53,6 +65,14 @@ export function CustomersTable({
         enableSortingRemoval={true}
         searchOnNamePlaceholder="Buscar por nombre"
         onRowClick={handleRowClick}
+        serverSideSearch={true}
+        onSearchChange={onSearchChange}
+        enablePagination={true}
+        page={page}
+        total={total}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        onPageChange={onPageChange}
       />
       <CustomerDetailsDrawer
         customer={selectedCustomer}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/axios";
 import type { Customer } from "@/types/customer";
 
@@ -8,71 +8,70 @@ interface UseCustomersOptions {
   searchQuery?: string;
   enabled?: boolean;
   limit?: number;
+  page?: number;
 }
 
-interface FetchCustomersParams {
-  pageParam?: number;
-  searchQuery?: string;
-  limit?: number;
+interface FetchCustomersResponse {
+  data: Customer[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 async function fetchCustomers({
-  pageParam = 0,
+  page = 0,
   searchQuery,
   limit = 10,
-}: FetchCustomersParams): Promise<Customer[]> {
+}: {
+  page?: number;
+  searchQuery?: string;
+  limit?: number;
+}): Promise<FetchCustomersResponse> {
   const params: Record<string, string> = {
     limit: limit.toString(),
-    skip: (pageParam * limit).toString(),
+    skip: (page * limit).toString(),
   };
 
   if (searchQuery) {
     params.name = searchQuery;
   }
 
-  const response = await apiClient.get<Customer[]>("/customers", { params });
-  return response.data;
+  const response = await apiClient.get<{
+    customers: Customer[];
+    total: number;
+  }>("/customers", { params });
+  const { customers, total } = response.data;
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    data: customers,
+    total,
+    page,
+    limit,
+    totalPages,
+  };
 }
 
 export function useCustomers(options: UseCustomersOptions = {}) {
-  const { searchQuery = "", enabled = true, limit = 10 } = options;
+  const { searchQuery = "", enabled = true, limit = 10, page = 0 } = options;
 
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    refetch,
-  } = useInfiniteQuery({
-    queryKey: ["customers", searchQuery, limit],
-    queryFn: ({ pageParam = 0 }) =>
-      fetchCustomers({ pageParam, searchQuery, limit }),
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["customers", searchQuery, limit, page],
+    queryFn: () => fetchCustomers({ page, searchQuery, limit }),
     enabled,
     staleTime: 30 * 1000, // 30 seconds
-    getNextPageParam: (lastPage, allPages) => {
-      // If the last page has fewer items than the limit, we've reached the end
-      if (lastPage.length < limit) {
-        return undefined;
-      }
-      return allPages.length;
-    },
-    initialPageParam: 0,
   });
 
-  // Flatten all pages into a single array
-  const customers = data?.pages.flat() || [];
-
   return {
-    customers,
+    customers: data?.data || [],
+    total: data?.total || 0,
+    page: data?.page || 0,
+    limit: data?.limit || limit,
+    totalPages: data?.totalPages || 1,
     isLoading,
     isError,
     error: error as Error | null,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
     refetch,
   };
 }

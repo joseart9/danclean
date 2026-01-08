@@ -55,17 +55,17 @@ export async function GET(request: Request) {
     const skip = skipParam ? parseInt(skipParam, 10) : undefined;
 
     if (name) {
-      const customers = await customerService.getCustomersByName(
+      const result = await customerService.getCustomersByName(
         name,
         limit,
         skip
       );
-      return NextResponse.json(customers, { status: 200 });
+      return NextResponse.json(result, { status: 200 });
     }
     // Get all customers with pagination
-    const customers = await customerService.getAllCustomers(limit, skip);
+    const result = await customerService.getAllCustomers(limit, skip);
 
-    return NextResponse.json(customers, { status: 200 });
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
     console.error("Error al obtener los clientes:", error);
     return NextResponse.json(

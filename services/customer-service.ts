@@ -2,7 +2,7 @@
 import { prisma } from "@/db";
 
 // Errors
-import { CustomerAlreadyExistsError, CustomerNotFoundError } from "@/errors";
+import { CustomerNotFoundError } from "@/errors";
 
 // Validators
 import {
@@ -44,16 +44,19 @@ export class CustomerService {
   }
 
   async getAllCustomers(limit?: number, skip?: number) {
+    // Get total count
+    const total = await prisma.customer.count();
+
     // Get all customers with pagination
     const customers = await prisma.customer.findMany({
       orderBy: {
-        createdAt: "desc",
+        name: "asc",
       },
       take: limit,
       skip: skip,
     });
 
-    return customers;
+    return { customers, total };
   }
 
   async updateCustomer(id: string, data: UpdateCustomerInput) {
@@ -91,6 +94,11 @@ export class CustomerService {
   }
 
   async getCustomersByName(name: string, limit?: number, skip?: number) {
+    // Get total count for search
+    const total = await prisma.customer.count({
+      where: { name: { contains: name, mode: "insensitive" } },
+    });
+
     // Get customers by name with pagination
     const customers = await prisma.customer.findMany({
       where: { name: { contains: name, mode: "insensitive" } },
@@ -98,7 +106,7 @@ export class CustomerService {
       skip: skip,
     });
 
-    return customers;
+    return { customers, total };
   }
 
   async getCustomersByPhone(phone: string) {

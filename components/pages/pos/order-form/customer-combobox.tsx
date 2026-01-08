@@ -22,6 +22,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import type { Customer } from "@/types/customer";
 import { CustomerDialog } from "./customer-dialog";
 import { Spinner } from "@/components/ui/spinner";
+import InfiniteScroll from "@/components/ui/infinite-scroll";
 
 interface CustomerComboboxProps {
   value?: Customer | null;
@@ -36,19 +37,95 @@ export function CustomerCombobox({
   const [searchQuery, setSearchQuery] = React.useState("");
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const queryClient = useQueryClient();
-  const listRef = React.useRef<HTMLDivElement>(null);
+  const [currentPage, setCurrentPage] = React.useState(0);
+  const [allCustomers, setAllCustomers] = React.useState<Customer[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
 
-  const {
-    customers,
-    isLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useCustomers({
+  const { customers, totalPages, isLoading } = useCustomers({
     searchQuery: searchQuery || undefined,
     enabled: open,
     limit: 10,
+    page: currentPage,
   });
+
+  // Track previous search query to detect changes
+  const prevSearchQueryRef = React.useRef<string>("");
+  const prevOpenRef = React.useRef<boolean>(false);
+
+  // Reset when popover closes or search changes
+  React.useEffect(() => {
+    // When popover closes, reset everything
+    if (!open && prevOpenRef.current) {
+      setAllCustomers([]);
+      setCurrentPage(0);
+      setSearchQuery("");
+      setIsLoadingMore(false);
+      prevSearchQueryRef.current = "";
+    }
+
+    // When popover opens, reset if needed
+    if (open && !prevOpenRef.current) {
+      setAllCustomers([]);
+      setCurrentPage(0);
+      setIsLoadingMore(false);
+      prevSearchQueryRef.current = "";
+    }
+
+    // Reset if search query changed while open
+    if (open && prevSearchQueryRef.current !== searchQuery) {
+      setAllCustomers([]);
+      setCurrentPage(0);
+      setIsLoadingMore(false);
+      prevSearchQueryRef.current = searchQuery;
+    }
+
+    prevOpenRef.current = open;
+  }, [open, searchQuery]);
+
+  // Accumulate customers for infinite scroll
+  React.useEffect(() => {
+    if (!open) return;
+
+    if (customers.length > 0) {
+      if (currentPage === 0) {
+        // For page 0, replace all customers
+        setAllCustomers(customers);
+        setIsLoadingMore(false);
+      } else {
+        // For subsequent pages, append customers (avoid duplicates)
+        setAllCustomers((prev: Customer[]) => {
+          const existingIds = new Set(prev.map((c) => c.id));
+          const newCustomers = customers.filter((c) => !existingIds.has(c.id));
+          return [...prev, ...newCustomers];
+        });
+        setIsLoadingMore(false);
+      }
+    } else if (currentPage === 0 && customers.length === 0 && !isLoading) {
+      // Reset if no customers on first page and not loading
+      setAllCustomers([]);
+      setIsLoadingMore(false);
+    }
+  }, [customers, currentPage, open, isLoading]);
+
+  // Calculate hasMore for InfiniteScroll
+  const hasMore = React.useMemo(() => {
+    if (!open) return false;
+    if (totalPages > 1) {
+      return currentPage < totalPages - 1;
+    }
+    // If we don't have totalPages yet, check if we got a full page
+    const currentLength =
+      allCustomers.length > 0 ? allCustomers.length : customers.length;
+    return currentLength === 10;
+  }, [open, totalPages, currentPage, allCustomers.length, customers.length]);
+
+  // Load next page function for InfiniteScroll
+  const loadNextPage = React.useCallback(() => {
+    if (hasMore && !isLoadingMore && !isLoading) {
+      setIsLoadingMore(true);
+      setCurrentPage((prev: number) => prev + 1);
+    }
+  }, [hasMore, isLoadingMore, isLoading]);
 
   const handleCustomerCreated = (customer: Customer) => {
     // Invalidate all customer queries to refresh the list
@@ -56,28 +133,6 @@ export function CustomerCombobox({
     onValueChange(customer);
     setDialogOpen(false);
   };
-
-  // Handle infinite scroll
-  React.useEffect(() => {
-    const listElement = listRef.current;
-    if (!listElement || !open) return;
-
-    const handleScroll = (e: Event) => {
-      const target = e.target as HTMLElement;
-      const { scrollTop, scrollHeight, clientHeight } = target;
-      // Load more when user is near the bottom (within 50px)
-      if (
-        scrollHeight - scrollTop - clientHeight < 50 &&
-        hasNextPage &&
-        !isFetchingNextPage
-      ) {
-        fetchNextPage();
-      }
-    };
-
-    listElement.addEventListener("scroll", handleScroll);
-    return () => listElement.removeEventListener("scroll", handleScroll);
-  }, [open, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <>
@@ -102,7 +157,7 @@ export function CustomerCombobox({
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
-            <CommandList ref={listRef}>
+            <CommandList>
               <CommandGroup>
                 <CommandItem
                   onSelect={() => {
@@ -116,31 +171,40 @@ export function CustomerCombobox({
                 </CommandItem>
               </CommandGroup>
               <CommandGroup>
-                {customers.map((customer) => (
-                  <CommandItem
-                    key={customer.id}
-                    value={`${customer.name} ${customer.lastName}`}
-                    onSelect={() => {
-                      onValueChange(customer);
-                      setOpen(false);
-                      setSearchQuery("");
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value?.id === customer.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {customer.name} {customer.lastName}
-                  </CommandItem>
-                ))}
-                {isFetchingNextPage && (
-                  <CommandItem disabled>
-                    <Spinner className="h-4 w-4 mr-2" />
-                    Cargando más...
-                  </CommandItem>
-                )}
+                <InfiniteScroll
+                  hasMore={hasMore}
+                  isLoading={isLoadingMore || isLoading}
+                  next={loadNextPage}
+                  threshold={1}
+                >
+                  {allCustomers.map((customer) => (
+                    <CommandItem
+                      key={customer.id}
+                      value={`${customer.name} ${customer.lastName}`}
+                      onSelect={() => {
+                        onValueChange(customer);
+                        setOpen(false);
+                        setSearchQuery("");
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value?.id === customer.id
+                            ? "opacity-100"
+                            : "opacity-0"
+                        )}
+                      />
+                      {customer.name} {customer.lastName}
+                    </CommandItem>
+                  ))}
+                  {hasMore && (isLoadingMore || isLoading) && (
+                    <CommandItem disabled>
+                      <Spinner className="h-4 w-4 mr-2" />
+                      Cargando más...
+                    </CommandItem>
+                  )}
+                </InfiniteScroll>
               </CommandGroup>
               <CommandEmpty>
                 {isLoading ? (
