@@ -147,7 +147,7 @@ export class DashboardStatsService {
    * Get total orders count
    */
   async getTotalOrders(from: Date, to: Date): Promise<number> {
-    const orders = await prisma.order.aggregate({
+    return await prisma.order.count({
       where: {
         timestamp: {
           gte: from,
@@ -157,11 +157,7 @@ export class DashboardStatsService {
           equals: null,
         },
       },
-      _count: {
-        _all: true,
-      },
     });
-    return orders._count._all;
   }
 
   /**
