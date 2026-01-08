@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -29,6 +28,8 @@ import {
   OrderStatus,
 } from "@/types/order";
 import type { FullOrder } from "@/types/order";
+import { formatCurrency } from "@/utils/format-currency";
+import { getCurrentDate } from "@/utils/get-current-date";
 
 interface DeliveryCompletionDialogProps {
   open: boolean;
@@ -54,6 +55,7 @@ export function DeliveryCompletionDialog({
   const [paymentMethod, setPaymentMethod] = useState<OrderPaymentMethod>(
     order.paymentMethod
   );
+  const today = getCurrentDate("America/Mexico_City");
 
   const remainingAmount = order.total - order.totalPaid;
   const isFullyPaid = order.totalPaid >= order.total;
@@ -64,14 +66,6 @@ export function DeliveryCompletionDialog({
   const isCash = paymentMethod === OrderPaymentMethod.CASH;
   const change =
     isCash && newTotalPaid > order.total ? newTotalPaid - order.total : 0;
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: "MXN",
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const getPaymentStatus = (): OrderPaymentStatus => {
     if (newTotalPaid >= order.total) {
@@ -118,11 +112,13 @@ export function DeliveryCompletionDialog({
         paid: number;
         paymentStatus: OrderPaymentStatus;
         paymentMethod?: OrderPaymentMethod;
+        timestamp: Date;
       } = {
         status: OrderStatus.DELIVERED,
         totalPaid: finalTotalPaid,
         paid: actualAmountPaid,
         paymentStatus,
+        timestamp: today,
       };
 
       // Only update payment method if there's an additional payment

@@ -81,7 +81,7 @@ export const updateOrderSchema = z.object({
     .int()
     .nonnegative("El número de ticket debe ser no negativo")
     .optional(),
-  timestamp: z.date().optional(),
+  timestamp: z.date(),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/axios";
 import { useQueryClient } from "@tanstack/react-query";
+import { getCurrentDate } from "@/utils/get-current-date";
+import { es } from "react-day-picker/locale";
 
 interface ExpenseFormDialogProps {
   open: boolean;
@@ -30,10 +33,19 @@ export function ExpenseFormDialog({
 }: ExpenseFormDialogProps) {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [date, setDate] = useState<Date>(getCurrentDate("America/Mexico_City"));
   const [formData, setFormData] = useState({
     name: "",
     amount: 0,
   });
+
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setFormData({ name: "", amount: 0 });
+      setDate(getCurrentDate("America/Mexico_City"));
+    }
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,9 +62,11 @@ export function ExpenseFormDialog({
 
     setIsSubmitting(true);
     try {
-      await apiClient.post("/expenses", formData);
+      await apiClient.post("/expenses", {
+        ...formData,
+        timestamp: date,
+      });
       toast.success("Gasto creado correctamente");
-      setFormData({ name: "", amount: 0 });
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       onOpenChange(false);
       onExpenseCreated?.();
@@ -71,12 +85,9 @@ export function ExpenseFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Agregar Gasto</DialogTitle>
-          <DialogDescription>
-            Ingresa la información del nuevo gasto
-          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
@@ -109,6 +120,26 @@ export function ExpenseFormDialog({
                   }
                   placeholder="0"
                 />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel>Fecha</FieldLabel>
+              <FieldContent>
+                <div className="bg-card rounded-lg p-4 w-full">
+                  <Calendar
+                    mode="single"
+                    onSelect={(value: Date | undefined) => {
+                      if (value != null) {
+                        setDate(value);
+                      }
+                    }}
+                    selected={date}
+                    timeZone="America/Mexico_City"
+                    className="capitalize"
+                    locale={es}
+                  />
+                </div>
               </FieldContent>
             </Field>
           </div>

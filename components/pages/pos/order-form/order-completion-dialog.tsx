@@ -23,7 +23,6 @@ import {
 } from "@/types/order";
 import type { OrderFormData } from "./order-form-context";
 import { useQueryClient } from "@tanstack/react-query";
-import { useDateRange } from "@/providers/date-range-provider";
 
 interface OrderCompletionDialogProps {
   open: boolean;
@@ -48,7 +47,6 @@ export function OrderCompletionDialog({
   onOrderCompleted,
   date,
 }: OrderCompletionDialogProps) {
-  const { range } = useDateRange();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [amountPaid, setAmountPaid] = useState<string>("");

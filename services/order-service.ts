@@ -831,7 +831,7 @@ export class OrderService {
         status: newStatus,
         total: latestOrder.total, // Keep the same total
         totalPaid: data.totalPaid ?? latestOrder.totalPaid,
-        paid: data.paid ?? latestOrder.paid,
+        paid: data.paid,
         orderNumber: latestOrder.orderNumber, // Keep the same order number
         ticketNumber: data.ticketNumber ?? latestOrder.ticketNumber, // Use updated ticket number or keep the same
         storageId: latestOrder.storageId, // Keep the same storage
