@@ -10,6 +10,7 @@ import {
   ChevronRightIcon,
   ChevronUpIcon,
   DownloadIcon,
+  EyeIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
   GripVerticalIcon,
@@ -44,6 +45,7 @@ import type {
   ColumnFiltersState,
   Header,
   SortingState,
+  VisibilityState,
 } from "@tanstack/react-table";
 import {
   flexRender,
@@ -56,8 +58,10 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -97,6 +101,7 @@ interface DataTableProps<TData> {
   totalPages?: number;
   pageSize?: number;
   onPageChange?: (page: number) => void;
+  isSimpleTable?: boolean;
 }
 
 const DataTable = <TData,>({
@@ -122,6 +127,7 @@ const DataTable = <TData,>({
   totalPages = 1,
   pageSize = 10,
   onPageChange,
+  isSimpleTable = false,
 }: DataTableProps<TData>) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -131,6 +137,25 @@ const DataTable = <TData,>({
   const [rowSelection, setRowSelection] = useState({});
   const [searchValue, setSearchValue] = useState("");
   const dndId = useId();
+
+  // Initialize column visibility based on defaultHidden property
+  const getInitialColumnVisibility = (): VisibilityState => {
+    const visibility: VisibilityState = {};
+    columns.forEach((column) => {
+      const columnId = (column.id ||
+        ("accessorKey" in column && typeof column.accessorKey === "string"
+          ? column.accessorKey
+          : undefined)) as string;
+      if (columnId && (column as { defaultHidden?: boolean }).defaultHidden) {
+        visibility[columnId] = false;
+      }
+    });
+    return visibility;
+  };
+
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
+    getInitialColumnVisibility()
+  );
 
   // Get sidebar state to calculate proper container width
   const { state, isMobile } = useSidebar();
@@ -314,6 +339,7 @@ const DataTable = <TData,>({
     ...(enableColumnResizing && { columnResizeMode: "onChange" }),
     initialState: {
       columnSizing: getInitialColumnSizes(),
+      columnVisibility: getInitialColumnVisibility(),
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -321,11 +347,13 @@ const DataTable = <TData,>({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onRowSelectionChange: setRowSelection,
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
       columnFilters,
       columnOrder,
       rowSelection,
+      columnVisibility,
     },
     onColumnOrderChange: setColumnOrder,
     enableSortingRemoval,
@@ -591,44 +619,90 @@ const DataTable = <TData,>({
           )}
         </div>
       </div>
-      {((enableExport && data.length > 0) || sideButtons) && (
-        <div className="absolute top-0 right-0 flex flex-row gap-2 z-10">
-          {enableExport && data.length > 0 && (
-            <div className="flex items-center space-x-2">
-              {table.getSelectedRowModel().rows.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {table.getSelectedRowModel().rows.length} de{" "}
-                  {table.getFilteredRowModel().rows.length} sel.
-                </span>
-              )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="secondary" size="default">
-                    <DownloadIcon className="mr-2 h-4 w-4" />
-                    Exportar
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={exportToCSV}>
-                    <FileTextIcon className="mr-2 h-4 w-4" />
-                    Exportar como CSV
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={exportToExcel}>
-                    <FileSpreadsheetIcon className="mr-2 h-4 w-4" />
-                    Exportar como Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={exportToJSON}>
-                    <FileTextIcon className="mr-2 h-4 w-4" />
-                    Exportar como JSON
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
-          {sideButtons}
-        </div>
-      )}
+      <div className="absolute top-0 right-0 flex flex-row gap-2 z-10">
+        {!isSimpleTable && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="default">
+                <EyeIcon className="mr-2 h-4 w-4" />
+                Columnas
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Mostrar columnas</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {table
+                .getAllColumns()
+                .filter((column) => {
+                  // Only show columns that have an id or accessorKey
+                  const hasAccessorKey =
+                    "accessorKey" in column.columnDef &&
+                    typeof column.columnDef.accessorKey === "string" &&
+                    column.columnDef.accessorKey;
+                  return hasAccessorKey || column.columnDef.id;
+                })
+                .map((column) => {
+                  const columnId = (column.columnDef.id ||
+                    ("accessorKey" in column.columnDef &&
+                    typeof column.columnDef.accessorKey === "string"
+                      ? column.columnDef.accessorKey
+                      : undefined)) as string;
+                  const header =
+                    typeof column.columnDef.header === "string"
+                      ? column.columnDef.header
+                      : columnId;
+
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={columnId}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) => {
+                        column.toggleVisibility(!!value);
+                      }}
+                    >
+                      {header || columnId}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        {enableExport && data.length > 0 && (
+          <div className="flex items-center space-x-2">
+            {table.getSelectedRowModel().rows.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {table.getSelectedRowModel().rows.length} de{" "}
+                {table.getFilteredRowModel().rows.length} sel.
+              </span>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="default">
+                  <DownloadIcon className="mr-2 h-4 w-4" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportToCSV}>
+                  <FileTextIcon className="mr-2 h-4 w-4" />
+                  Exportar como CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToExcel}>
+                  <FileSpreadsheetIcon className="mr-2 h-4 w-4" />
+                  Exportar como Excel
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={exportToJSON}>
+                  <FileTextIcon className="mr-2 h-4 w-4" />
+                  Exportar como JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+        {sideButtons}
+      </div>
     </div>
   );
 };

@@ -72,6 +72,7 @@ export default function DeliveryPage() {
               enableSortingRemoval={true}
               emptyMessage="No hay órdenes para mostrar"
               onRowClick={handleRowClick}
+              isSimpleTable={true}
             />
           </div>
         </div>
@@ -79,6 +80,11 @@ export default function DeliveryPage() {
 
       {order && (
         <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={handleTerminarClick} size="lg">
+              Entregar
+            </Button>
+          </div>
           <OrderDisplay order={order} />
           <div className="flex justify-end">
             <Button onClick={handleTerminarClick} size="lg">

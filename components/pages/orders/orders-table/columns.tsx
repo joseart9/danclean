@@ -4,6 +4,11 @@ import { OrderStatus, OrderType } from "@/types/order";
 import { translateOrderStatus } from "@/utils/translate-order-status";
 import { Badge } from "@/components/ui/badge";
 
+// Extend ColumnDef to include defaultHidden property
+type ExtendedColumnDef<TData> = ColumnDef<TData> & {
+  defaultHidden?: boolean;
+};
+
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -27,7 +32,7 @@ const getItemQuantity = (order: FullOrder): number => {
   }
 };
 
-export const columns: ColumnDef<FullOrder>[] = [
+export const columns: ExtendedColumnDef<FullOrder>[] = [
   {
     accessorKey: "type",
     header: "Servicio",
@@ -53,6 +58,7 @@ export const columns: ColumnDef<FullOrder>[] = [
     cell: ({ row }) => {
       return <div className="font-medium">{row.original.orderNumber}</div>;
     },
+    defaultHidden: true,
   },
   {
     id: "name",
@@ -92,6 +98,7 @@ export const columns: ColumnDef<FullOrder>[] = [
       const quantity = getItemQuantity(row.original);
       return <div>{quantity}</div>;
     },
+    defaultHidden: true,
   },
 
   {
