@@ -13,9 +13,13 @@ import { CustomerCombobox } from "@/components/pages/pos/order-form/customer-com
 
 interface OrderSearchFormProps {
   onOrderFound: (order: FullOrder) => void;
+  onMultipleOrdersFound?: (orders: FullOrder[]) => void;
 }
 
-export function OrderSearchForm({ onOrderFound }: OrderSearchFormProps) {
+export function OrderSearchForm({
+  onOrderFound,
+  onMultipleOrdersFound,
+}: OrderSearchFormProps) {
   const [orderNumber, setOrderNumber] = useState<string>("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
@@ -80,13 +84,14 @@ export function OrderSearchForm({ onOrderFound }: OrderSearchFormProps) {
         return;
       }
 
-      // If multiple orders found, use the first one (most recent)
-      if (orders.length > 1) {
-        toast.success(
-          `Se encontraron ${orders.length} órdenes. Mostrando la más reciente.`
-        );
+      // If multiple orders found, call onMultipleOrdersFound if provided
+      if (orders.length > 1 && onMultipleOrdersFound) {
+        onMultipleOrdersFound(orders);
+        toast.success(`Se encontraron ${orders.length} órdenes pendientes`);
+        return;
       }
 
+      // Single order or no multiple handler - use the first one
       onOrderFound(orders[0]);
       toast.success("Orden encontrada");
     } catch (error: unknown) {

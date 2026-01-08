@@ -149,7 +149,7 @@ export class DashboardStatsService {
   async getTotalOrders(from: Date, to: Date): Promise<number> {
     return await prisma.order.count({
       where: {
-        isMainOrder: true,
+        mainOrderId: null,
         timestamp: {
           gte: from,
           lte: to,
