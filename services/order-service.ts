@@ -641,7 +641,7 @@ export class OrderService {
         },
       },
       orderBy: {
-        createdAt: "desc",
+        ticketNumber: "desc",
       },
     });
 
@@ -945,39 +945,78 @@ export class OrderService {
       throw new OrderNotFoundError(id);
     }
 
-    // If order is not released, release it first (free capacity and order number)
-    if (!storageService.isOrderReleased(order.status as OrderStatus)) {
-      await storageService.releaseOrder(id).catch(() => {
-        // If release fails, continue with deletion
-      });
+    // Get the ticket number to find all orders in the history
+    const ticketNumber = order.ticketNumber;
+
+    // Find all orders with the same ticket number (entire order history)
+    const allOrdersWithSameTicket = await prisma.order.findMany({
+      where: {
+        ticketNumber: ticketNumber,
+      },
+      include: {
+        orderItems: true,
+      },
+    });
+
+    // Collect all unique item IDs to avoid duplicate deletions
+    const itemIdsToDelete = new Map<string, { type: string; itemId: string }>();
+
+    // Release storage for all unreleased orders and collect order items
+    for (const orderToDelete of allOrdersWithSameTicket) {
+      // If order is not released, release it first (free capacity and order number)
+      if (
+        !storageService.isOrderReleased(orderToDelete.status as OrderStatus)
+      ) {
+        // Use the original order ID for release (the one without mainOrderId or the main order)
+        const originalOrderId = orderToDelete.mainOrderId || orderToDelete.id;
+        await storageService.releaseOrder(originalOrderId).catch(() => {
+          // If release fails, continue with deletion
+        });
+      }
+
+      // Collect order items and their referenced items
+      for (const orderItem of orderToDelete.orderItems) {
+        // Store item info for later deletion (avoid duplicates)
+        if (!itemIdsToDelete.has(orderItem.itemId)) {
+          itemIdsToDelete.set(orderItem.itemId, {
+            type: orderItem.type,
+            itemId: orderItem.itemId,
+          });
+        }
+      }
     }
 
-    // Delete order items first
+    // Delete all order items first
+    const allOrderItemIds = allOrdersWithSameTicket.flatMap((o) =>
+      o.orderItems.map((oi) => oi.id)
+    );
     await Promise.all(
-      order.orderItems.map((orderItem) =>
-        prisma.orderItem.delete({ where: { id: orderItem.id } })
+      allOrderItemIds.map((orderItemId) =>
+        prisma.orderItem.delete({ where: { id: orderItemId } })
       )
     );
 
     // Delete the items (ironing or cleaning) referenced by order items
-    for (const orderItem of order.orderItems) {
-      if (orderItem.type === OrderType.IRONING) {
-        await prisma.ironingItem
-          .delete({ where: { id: orderItem.itemId } })
-          .catch(() => {
-            // Item might already be deleted or not exist
-          });
-      } else if (orderItem.type === OrderType.CLEANING) {
+    for (const { type, itemId } of itemIdsToDelete.values()) {
+      if (type === OrderType.IRONING) {
+        await prisma.ironingItem.delete({ where: { id: itemId } }).catch(() => {
+          // Item might already be deleted or not exist
+        });
+      } else if (type === OrderType.CLEANING) {
         await prisma.cleaningItem
-          .delete({ where: { id: orderItem.itemId } })
+          .delete({ where: { id: itemId } })
           .catch(() => {
             // Item might already be deleted or not exist
           });
       }
     }
 
-    // Delete order
-    await prisma.order.delete({ where: { id } });
+    // Delete all orders with the same ticket number
+    await prisma.order.deleteMany({
+      where: {
+        ticketNumber: ticketNumber,
+      },
+    });
   }
 }
 

@@ -45,6 +45,8 @@ export async function PATCH(
     const data = await request.json();
     const timestamp = new Date(data.timestamp);
 
+    console.log("timestamp", timestamp);
+
     // Validate request body
     const validatedData = updateOrderSchema.parse({
       ...data,

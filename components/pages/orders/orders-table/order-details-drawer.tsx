@@ -136,6 +136,7 @@ export function OrderDetailsDrawer({
           paymentMethod: formData.paymentMethod,
           totalPaid: formData.totalPaid,
           ticketNumber: formData.ticketNumber,
+          timestamp: displayOrder.timestamp,
         }
       );
 
