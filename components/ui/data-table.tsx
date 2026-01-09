@@ -74,6 +74,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSidebar } from "@/components/ui/sidebar";
 
 interface DataTableProps<TData> {
@@ -94,6 +95,7 @@ interface DataTableProps<TData> {
   // Server-side search
   onSearchChange?: (searchQuery: string) => void;
   serverSideSearch?: boolean;
+  searchValue?: string;
   // Pagination
   enablePagination?: boolean;
   page?: number;
@@ -102,6 +104,10 @@ interface DataTableProps<TData> {
   pageSize?: number;
   onPageChange?: (page: number) => void;
   isSimpleTable?: boolean;
+  // Loading state
+  isLoading?: boolean;
+  // Row height
+  rowHeight?: "sm" | "md" | "lg";
 }
 
 const DataTable = <TData,>({
@@ -121,6 +127,7 @@ const DataTable = <TData,>({
   onRowClick,
   onSearchChange,
   serverSideSearch = false,
+  searchValue: searchValueProp,
   enablePagination = false,
   page = 0,
   total = 0,
@@ -128,6 +135,8 @@ const DataTable = <TData,>({
   pageSize = 10,
   onPageChange,
   isSimpleTable = false,
+  isLoading = false,
+  rowHeight = "md",
 }: DataTableProps<TData>) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -135,8 +144,30 @@ const DataTable = <TData,>({
     columns.map((column) => column.id as string)
   );
   const [rowSelection, setRowSelection] = useState({});
-  const [searchValue, setSearchValue] = useState("");
+  const [internalSearchValue, setInternalSearchValue] = useState(
+    searchValueProp ?? ""
+  );
   const dndId = useId();
+
+  // Track if update came from prop to avoid triggering debounce
+  const isFromPropRef = React.useRef(false);
+
+  // Sync internal state with prop when prop changes (for controlled inputs)
+  React.useEffect(() => {
+    if (serverSideSearch && searchValueProp !== undefined) {
+      isFromPropRef.current = true;
+      setInternalSearchValue(searchValueProp);
+      // Update the previous debounced value ref so debounce doesn't fire
+      prevDebouncedValueRef.current = searchValueProp;
+      // Reset flag after state update
+      setTimeout(() => {
+        isFromPropRef.current = false;
+      }, 0);
+    }
+  }, [searchValueProp, serverSideSearch]);
+
+  // Always use internal state for input value (for immediate feedback during typing)
+  const searchValue = internalSearchValue;
 
   // Initialize column visibility based on defaultHidden property
   const getInitialColumnVisibility = (): VisibilityState => {
@@ -183,6 +214,34 @@ const DataTable = <TData,>({
 
   // Show search input if enabled and name column exists
   const showSearch = enableSearchOnName && hasNameColumn;
+
+  // Get row height classes based on rowHeight prop
+  const getRowHeightClasses = () => {
+    switch (rowHeight) {
+      case "sm":
+        return {
+          row: "h-8",
+          cell: "py-1",
+        };
+      case "md":
+        return {
+          row: "h-10",
+          cell: "py-2",
+        };
+      case "lg":
+        return {
+          row: "h-12",
+          cell: "py-3",
+        };
+      default:
+        return {
+          row: "h-10",
+          cell: "py-2",
+        };
+    }
+  };
+
+  const rowHeightClasses = getRowHeightClasses();
 
   // Helper function to get export data with only visible columns and proper headers
   const getExportData = () => {
@@ -361,30 +420,45 @@ const DataTable = <TData,>({
     manualFiltering: serverSideSearch,
   });
 
-  // Handle server-side search with debounce
-  const prevSearchValueRef = React.useRef<string>("");
+  // Handle server-side search with debounce (for both controlled and uncontrolled)
+  const debounceTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const prevDebouncedValueRef = React.useRef<string>("");
   const isInitialMount = React.useRef<boolean>(true);
 
+  // Debounce search changes - call onSearchChange after user stops typing
   React.useEffect(() => {
     if (!serverSideSearch || !onSearchChange) return;
 
     // Skip initial mount to avoid unnecessary search call
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      prevSearchValueRef.current = searchValue;
+      prevDebouncedValueRef.current = internalSearchValue;
       return;
     }
 
-    // Only trigger if search value actually changed
-    if (prevSearchValueRef.current === searchValue) return;
+    // Don't trigger if update came from prop (parent-controlled)
+    if (isFromPropRef.current) return;
 
-    const timeoutId = setTimeout(() => {
-      prevSearchValueRef.current = searchValue;
-      onSearchChange(searchValue);
+    // Only trigger if search value actually changed
+    if (prevDebouncedValueRef.current === internalSearchValue) return;
+
+    // Clear any existing timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Set new timeout for debounce
+    debounceTimeoutRef.current = setTimeout(() => {
+      prevDebouncedValueRef.current = internalSearchValue;
+      onSearchChange(internalSearchValue);
     }, 300); // 300ms debounce
 
-    return () => clearTimeout(timeoutId);
-  }, [searchValue, serverSideSearch, onSearchChange]);
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [internalSearchValue, serverSideSearch, onSearchChange]);
 
   function handleDragEnd(event: DragEndEvent) {
     if (!enableColumnReordering) return;
@@ -453,13 +527,44 @@ const DataTable = <TData,>({
         ))}
       </TableHeader>
       <TableBody>
-        {table.getRowModel().rows?.length ? (
+        {isLoading ? (
+          // Show skeleton rows when loading
+          Array.from({ length: pageSize || 10 }).map((_, index) => (
+            <TableRow
+              key={`skeleton-${index}`}
+              className={rowHeightClasses.row}
+            >
+              {columns.map((column, colIndex) => (
+                <TableCell
+                  key={colIndex}
+                  className={`truncate ${rowHeightClasses.cell}`}
+                >
+                  {colIndex === 0 ? (
+                    // First column - mimic product/item cell with image and text
+                    <div className="flex items-center gap-3">
+                      <div className="space-y-1">
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                    </div>
+                  ) : (
+                    // Other columns - simple skeleton
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                  )}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))
+        ) : table.getRowModel().rows?.length ? (
           table.getRowModel().rows.map((row) => (
             <TableRow
               key={row.id}
               data-state={row.getIsSelected() && "selected"}
               onClick={() => onRowClick?.(row.original)}
-              className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
+              className={`${rowHeightClasses.row} ${
+                onRowClick ? "cursor-pointer hover:bg-muted/50" : ""
+              }`}
             >
               {enableColumnReordering
                 ? row.getVisibleCells().map((cell) => (
@@ -472,13 +577,14 @@ const DataTable = <TData,>({
                         key={cell.id}
                         cell={cell}
                         enableColumnResizing={enableColumnResizing}
+                        rowHeightClass={rowHeightClasses.cell}
                       />
                     </SortableContext>
                   ))
                 : row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className="truncate"
+                      className={`truncate ${rowHeightClasses.cell}`}
                       style={
                         enableColumnResizing
                           ? { width: cell.column.getSize() }
@@ -538,7 +644,9 @@ const DataTable = <TData,>({
                 onChange={(event) => {
                   const value = event.target.value;
                   if (serverSideSearch) {
-                    setSearchValue(value);
+                    // Update internal state for immediate UI feedback
+                    // The useEffect will handle the debounced onSearchChange call
+                    setInternalSearchValue(value);
                   } else {
                     table.getColumn("name")?.setFilterValue(value);
                   }
@@ -922,9 +1030,11 @@ const StaticTableHeader = <TData,>({
 const DragAlongCell = <TData,>({
   cell,
   enableColumnResizing,
+  rowHeightClass,
 }: {
   cell: Cell<TData, unknown>;
   enableColumnResizing: boolean;
+  rowHeightClass?: string;
 }) => {
   const { isDragging, setNodeRef, transform, transition } = useSortable({
     id: cell.column.id,
@@ -940,7 +1050,11 @@ const DragAlongCell = <TData,>({
   };
 
   return (
-    <TableCell ref={setNodeRef} className="truncate" style={style}>
+    <TableCell
+      ref={setNodeRef}
+      className={`truncate ${rowHeightClass || ""}`}
+      style={style}
+    >
       {flexRender(cell.column.columnDef.cell, cell.getContext())}
     </TableCell>
   );

@@ -47,6 +47,7 @@ function CustomersPageContent() {
         isLoading={isLoading}
         onCustomersChange={() => refetch()}
         onSearchChange={handleSearchChange}
+        searchQuery={searchQuery}
         page={page}
         total={total}
         totalPages={totalPages}

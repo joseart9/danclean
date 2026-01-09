@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { DataTable } from "@/components/ui/data-table";
-import { SkeletonDataTable } from "@/components/ui/data-table-skeleton";
 import { columns } from "./columns";
 import type { Customer } from "@/types/customer";
 import { CustomerDetailsDrawer } from "./customer-details-drawer";
@@ -12,6 +11,7 @@ interface CustomersTableProps {
   isLoading: boolean;
   onCustomersChange?: () => void;
   onSearchChange?: (searchQuery: string) => void;
+  searchQuery?: string;
   page?: number;
   total?: number;
   totalPages?: number;
@@ -24,6 +24,7 @@ export function CustomersTable({
   isLoading,
   onCustomersChange,
   onSearchChange,
+  searchQuery = "",
   page = 0,
   total = 0,
   totalPages = 1,
@@ -47,10 +48,6 @@ export function CustomersTable({
     setIsDrawerOpen(false);
   };
 
-  if (isLoading) {
-    return <SkeletonDataTable columns={6} rows={10} />;
-  }
-
   return (
     <>
       <DataTable
@@ -67,12 +64,15 @@ export function CustomersTable({
         onRowClick={handleRowClick}
         serverSideSearch={true}
         onSearchChange={onSearchChange}
+        searchValue={searchQuery}
         enablePagination={true}
         page={page}
         total={total}
         totalPages={totalPages}
         pageSize={pageSize}
         onPageChange={onPageChange}
+        isLoading={isLoading}
+        rowHeight="lg"
       />
       <CustomerDetailsDrawer
         customer={selectedCustomer}

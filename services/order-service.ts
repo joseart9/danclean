@@ -613,18 +613,33 @@ export class OrderService {
     return enrichedOrders[0];
   }
 
-  async getAllOrders(includeDelivered: boolean = false) {
+  async getAllOrders(
+    includeDelivered: boolean = false,
+    limit?: number,
+    skip?: number,
+    searchQuery?: string
+  ) {
     // Get all main orders (isMainOrder = true)
-    const where: {
-      isMainOrder: boolean;
-      status?: { not: OrderStatus };
-    } = {
+    const where: any = {
       isMainOrder: true,
     };
 
     if (!includeDelivered) {
       where.status = { not: OrderStatus.DELIVERED };
     }
+
+    // Add search by customer name if searchQuery is provided
+    if (searchQuery) {
+      where.customer = {
+        OR: [
+          { name: { contains: searchQuery, mode: "insensitive" } },
+          { lastName: { contains: searchQuery, mode: "insensitive" } },
+        ],
+      };
+    }
+
+    // Get total count
+    const total = await prisma.order.count({ where });
 
     const orders = await prisma.order.findMany({
       where,
@@ -643,10 +658,13 @@ export class OrderService {
       orderBy: {
         ticketNumber: "desc",
       },
+      take: limit,
+      skip: skip,
     });
 
     // Enrich with actual items
-    return await this.enrichOrdersWithItems(orders);
+    const enrichedOrders = await this.enrichOrdersWithItems(orders);
+    return { orders: enrichedOrders, total };
   }
 
   async getOrdersByCustomerId(

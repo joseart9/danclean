@@ -125,9 +125,20 @@ export async function GET(request: Request) {
 
     // Otherwise, get all orders
     const includeDelivered = searchParams.get("include_delivered") === "true";
-    const orders = await orderService.getAllOrders(includeDelivered);
+    const limitParam = searchParams.get("limit");
+    const skipParam = searchParams.get("skip");
+    const name = searchParams.get("name"); // Search by customer name
+    const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+    const skip = skipParam ? parseInt(skipParam, 10) : undefined;
 
-    return NextResponse.json(orders, { status: 200 });
+    const result = await orderService.getAllOrders(
+      includeDelivered,
+      limit,
+      skip,
+      name || undefined
+    );
+
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
     // Handle custom application errors
     if (error instanceof AppError) {

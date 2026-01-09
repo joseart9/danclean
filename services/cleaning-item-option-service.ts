@@ -42,7 +42,7 @@ export class CleaningItemOptionService {
     // Get all cleaning item options
     const cleaningItemOptions = await prisma.cleaningItemOption.findMany({
       orderBy: {
-        createdAt: "desc",
+        name: "asc",
       },
     });
 

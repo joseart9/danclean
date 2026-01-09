@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { DataTable } from "@/components/ui/data-table";
-import { SkeletonDataTable } from "@/components/ui/data-table-skeleton";
 import { columns } from "./columns";
 import type { FullOrder } from "@/types/order";
 import { OrderDetailsDrawer } from "./order-details-drawer";
@@ -14,6 +13,13 @@ interface OrdersTableProps {
   onOrdersChange?: () => void;
   includeDelivered?: boolean;
   onIncludeDeliveredChange?: (include: boolean) => void;
+  page?: number;
+  total?: number;
+  totalPages?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  onSearchChange?: (searchQuery: string) => void;
+  searchQuery?: string;
 }
 
 export function OrdersTable({
@@ -22,6 +28,13 @@ export function OrdersTable({
   onOrdersChange,
   includeDelivered = false,
   onIncludeDeliveredChange,
+  page = 0,
+  total = 0,
+  totalPages = 1,
+  pageSize = 10,
+  onPageChange,
+  onSearchChange,
+  searchQuery = "",
 }: OrdersTableProps) {
   const [selectedOrder, setSelectedOrder] = useState<FullOrder | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -38,10 +51,6 @@ export function OrdersTable({
     setIsDrawerOpen(false);
   };
 
-  if (isLoading) {
-    return <SkeletonDataTable columns={8} rows={10} />;
-  }
-
   return (
     <>
       <DataTable
@@ -56,6 +65,17 @@ export function OrdersTable({
         enableSortingRemoval={true}
         searchOnNamePlaceholder="Buscar por cliente"
         onRowClick={handleRowClick}
+        enablePagination={true}
+        page={page}
+        total={total}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        onPageChange={onPageChange}
+        serverSideSearch={true}
+        onSearchChange={onSearchChange}
+        searchValue={searchQuery}
+        isLoading={isLoading}
+        rowHeight="lg"
         sideButtons={
           <>
             {onIncludeDeliveredChange && (
