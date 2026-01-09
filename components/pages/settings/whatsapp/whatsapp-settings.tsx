@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -9,8 +10,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { apiClient } from "@/lib/axios";
+import { toast } from "sonner";
 
 interface QRResponse {
   status: string;
@@ -28,6 +31,11 @@ interface HealthResponse {
   timestamp: string;
 }
 
+interface LogoutResponse {
+  status: string;
+  message: string;
+}
+
 async function fetchQRCode(): Promise<QRResponse> {
   const response = await apiClient.get<QRResponse>("/whatsapp/connect");
   return response.data;
@@ -39,6 +47,9 @@ async function fetchHealth(): Promise<HealthResponse> {
 }
 
 export function WhatsAppSettings() {
+  const queryClient = useQueryClient();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   // Fetch QR code
   const {
     data: qrData,
@@ -73,6 +84,36 @@ export function WhatsAppSettings() {
     healthData?.whatsapp?.ready === true &&
     healthData?.whatsapp?.authenticated === true;
 
+  const handleLogout = async () => {
+    if (!isConnected) {
+      toast.error("No hay sesión activa para cerrar");
+      return;
+    }
+
+    setIsLoggingOut(true);
+    try {
+      const response = await apiClient.post<LogoutResponse>("/whatsapp/logout");
+      toast.success(response.data.message || "Sesión cerrada correctamente");
+
+      // Invalidate queries to refresh the status
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-health"] });
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-qr"] });
+
+      // Refetch to get updated status
+      await Promise.all([refetchHealth(), refetchQR()]);
+    } catch (error: unknown) {
+      console.error("Error logging out:", error);
+      const errorMessage =
+        error && typeof error === "object" && "response" in error
+          ? (error as { response?: { data?: { error?: string } } }).response
+              ?.data?.error
+          : undefined;
+      toast.error(errorMessage || "Error al cerrar sesión de WhatsApp");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -104,16 +145,35 @@ export function WhatsAppSettings() {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <Badge variant={isConnected ? "default" : "destructive"}>
-                {isConnected ? "Conectado" : "Desconectado"}
-              </Badge>
-              <button
-                onClick={() => refetchHealth()}
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                Actualizar
-              </button>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant={isConnected ? "default" : "destructive"}>
+                  {isConnected ? "Conectado" : "Desconectado"}
+                </Badge>
+                <button
+                  onClick={() => refetchHealth()}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Actualizar
+                </button>
+              </div>
+              {isConnected && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? (
+                    <>
+                      <Spinner className="h-4 w-4" />
+                      Cerrando...
+                    </>
+                  ) : (
+                    "Cerrar Sesión"
+                  )}
+                </Button>
+              )}
             </div>
           )}
         </CardContent>

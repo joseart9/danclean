@@ -3,10 +3,11 @@ import { apiClient } from "@/lib/axios";
 
 export interface OrderReportItem {
   id: string;
-  client: string;
+  ticketNumber: number;
+  customerName: string;
+  customerLastName: string;
   orderType: "IRONING" | "CLEANING";
-  quantity: number;
-  orderTotal: number;
+  paid: number;
 }
 
 async function fetchOrderReport(

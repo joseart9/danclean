@@ -1,7 +1,6 @@
 "use client";
 
 import { DataTable } from "@/components/ui/data-table";
-import { SkeletonDataTable } from "@/components/ui/data-table-skeleton";
 import { useOrderReport } from "@/hooks/useReports";
 import { OrderType } from "@/types/order";
 import { Badge } from "@/components/ui/badge";
@@ -23,16 +22,28 @@ const formatCurrency = (amount: number) => {
 
 const orderTypeLabels: Record<OrderType, string> = {
   [OrderType.IRONING]: "Planchado",
-  [OrderType.CLEANING]: "Lavado",
+  [OrderType.CLEANING]: "Tintoreria",
 };
 
 const columns: ColumnDef<OrderReportItem>[] = [
   {
-    id: "client",
-    accessorKey: "client",
+    id: "ticketNumber",
+    accessorKey: "ticketNumber",
+    header: "Ticket",
+    cell: ({ row }) => {
+      return <div className="font-medium">{row.original.ticketNumber}</div>;
+    },
+  },
+  {
+    id: "customer",
+    accessorKey: "customerName",
     header: "Cliente",
     cell: ({ row }) => {
-      return <div className="font-medium">{row.original.client}</div>;
+      return (
+        <div className="font-medium">
+          {row.original.customerName} {row.original.customerLastName}
+        </div>
+      );
     },
   },
   {
@@ -41,29 +52,19 @@ const columns: ColumnDef<OrderReportItem>[] = [
     header: "Tipo de Orden",
     cell: ({ row }) => {
       return (
-        <Badge variant="outline">
+        <div className="font-medium uppercase">
           {orderTypeLabels[row.original.orderType]}
-        </Badge>
+        </div>
       );
     },
   },
   {
-    id: "quantity",
-    accessorKey: "quantity",
-    header: "Cantidad",
-    cell: ({ row }) => {
-      return <div className="text-right">{row.original.quantity}</div>;
-    },
-  },
-  {
-    id: "orderTotal",
-    accessorKey: "orderTotal",
-    header: "Total",
+    id: "paid",
+    accessorKey: "paid",
+    header: "Pagado",
     cell: ({ row }) => {
       return (
-        <div className="text-right font-medium">
-          {formatCurrency(row.original.orderTotal)}
-        </div>
+        <div className="font-medium">{formatCurrency(row.original.paid)}</div>
       );
     },
   },
@@ -72,10 +73,6 @@ const columns: ColumnDef<OrderReportItem>[] = [
 export function OrderReport({ fromDate, toDate }: OrderReportProps) {
   const { data, isLoading } = useOrderReport(fromDate, toDate);
 
-  if (isLoading) {
-    return <SkeletonDataTable columns={4} rows={10} />;
-  }
-
   return (
     <DataTable
       data={data || []}
@@ -83,6 +80,7 @@ export function OrderReport({ fromDate, toDate }: OrderReportProps) {
       enableExport={true}
       exportFilename="reporte-ordenes"
       emptyMessage="No hay datos para el rango de fechas seleccionado"
+      isLoading={isLoading}
     />
   );
 }
