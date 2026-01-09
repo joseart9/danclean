@@ -32,7 +32,6 @@ export async function GET(request: Request) {
     // Get all orders in date range (only main orders) where paid != 0
     const orders = await prisma.order.findMany({
       where: {
-        isMainOrder: true,
         timestamp: {
           gte: from,
           lte: to,
@@ -45,7 +44,7 @@ export async function GET(request: Request) {
         customer: true,
       },
       orderBy: {
-        timestamp: "desc",
+        ticketNumber: "desc",
       },
     });
 

@@ -70,6 +70,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -614,6 +615,37 @@ const DataTable = <TData,>({
           </TableRow>
         )}
       </TableBody>
+      {!isLoading &&
+        table.getRowModel().rows?.length > 0 &&
+        table.getFooterGroups().length > 0 &&
+        table
+          .getFooterGroups()[0]
+          .headers.some((header) => header.column.columnDef.footer) && (
+          <TableFooter>
+            {table.getFooterGroups().map((footerGroup) => (
+              <TableRow key={footerGroup.id}>
+                {footerGroup.headers.map((header) => (
+                  <TableCell
+                    key={header.id}
+                    className={`font-medium ${rowHeightClasses.cell}`}
+                    style={
+                      enableColumnResizing
+                        ? { width: header.getSize() }
+                        : undefined
+                    }
+                  >
+                    {header.column.columnDef.footer
+                      ? flexRender(
+                          header.column.columnDef.footer,
+                          header.getContext()
+                        )
+                      : null}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableFooter>
+        )}
     </Table>
   );
 

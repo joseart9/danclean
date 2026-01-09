@@ -33,17 +33,19 @@ export async function GET(request: Request) {
     // Get all orders in date range (only main orders)
     const orders = await prisma.order.findMany({
       where: {
-        isMainOrder: true,
-        createdAt: {
+        timestamp: {
           gte: from,
           lte: to,
+        },
+        paid: {
+          not: 0,
         },
       },
       include: {
         customer: true,
       },
       orderBy: {
-        createdAt: "desc",
+        ticketNumber: "desc",
       },
     });
 

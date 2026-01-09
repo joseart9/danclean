@@ -30,7 +30,7 @@ const paymentMethodLabels: Record<OrderPaymentMethod, string> = {
 
 const orderTypeLabels: Record<OrderType, string> = {
   [OrderType.IRONING]: "Planchado",
-  [OrderType.CLEANING]: "Lavado",
+  [OrderType.CLEANING]: "Tintoreria",
 };
 
 interface PaymentMethodReportRow extends PaymentMethodReportOrder {
@@ -45,7 +45,9 @@ const columns: ColumnDef<PaymentMethodReportRow>[] = [
     header: "Método de Pago",
     cell: ({ row }) => {
       return (
-        <div className="font-medium">{row.original.paymentMethodLabel}</div>
+        <div className="font-medium uppercase">
+          {row.original.paymentMethodLabel}
+        </div>
       );
     },
   },
@@ -63,9 +65,9 @@ const columns: ColumnDef<PaymentMethodReportRow>[] = [
     header: "Tipo",
     cell: ({ row }) => {
       return (
-        <Badge variant="outline">
+        <div className="font-medium uppercase">
           {orderTypeLabels[row.original.orderType]}
-        </Badge>
+        </div>
       );
     },
   },
@@ -75,7 +77,7 @@ const columns: ColumnDef<PaymentMethodReportRow>[] = [
     header: "Total",
     cell: ({ row }) => {
       return (
-        <div className="text-right font-medium">
+        <div className="font-medium">
           {formatCurrency(row.original.orderTotal)}
         </div>
       );
@@ -101,10 +103,6 @@ export function PaymentMethodReport({
     );
   }, [data]);
 
-  if (isLoading) {
-    return <SkeletonDataTable columns={4} rows={10} />;
-  }
-
   return (
     <DataTable
       data={tableData}
@@ -112,6 +110,7 @@ export function PaymentMethodReport({
       enableExport={true}
       exportFilename="reporte-metodo-pago"
       emptyMessage="No hay datos para el rango de fechas seleccionado"
+      isLoading={isLoading}
     />
   );
 }
