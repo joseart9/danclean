@@ -104,6 +104,9 @@ export class CustomerService {
       where: { name: { contains: name, mode: "insensitive" } },
       take: limit,
       skip: skip,
+      orderBy: {
+        name: "asc",
+      },
     });
 
     return { customers, total };

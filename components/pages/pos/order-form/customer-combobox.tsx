@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -151,7 +150,18 @@ export function CustomerCombobox({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full p-0" align="start">
-          <Command>
+          <Command
+            filter={(value, search) => {
+              // Always show items with "Agregar cliente" text
+              if (value.includes("Agregar cliente")) {
+                return 1;
+              }
+              // Default filtering for other items
+              if (!search) return 1;
+              const normalizedSearch = search.toLowerCase();
+              return value.toLowerCase().includes(normalizedSearch) ? 1 : 0;
+            }}
+          >
             <CommandInput
               placeholder="Buscar cliente..."
               value={searchQuery}
@@ -160,6 +170,7 @@ export function CustomerCombobox({
             <CommandList>
               <CommandGroup>
                 <CommandItem
+                  value="Agregar cliente"
                   onSelect={() => {
                     setOpen(false);
                     setDialogOpen(true);
@@ -170,56 +181,61 @@ export function CustomerCombobox({
                   Agregar cliente
                 </CommandItem>
               </CommandGroup>
-              <CommandGroup>
-                <InfiniteScroll
-                  hasMore={hasMore}
-                  isLoading={isLoadingMore || isLoading}
-                  next={loadNextPage}
-                  threshold={1}
-                >
-                  {allCustomers.map((customer) => (
-                    <CommandItem
-                      key={customer.id}
-                      value={`${customer.name} ${customer.lastName}`}
-                      onSelect={() => {
-                        onValueChange(customer);
-                        setOpen(false);
-                        setSearchQuery("");
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          value?.id === customer.id
-                            ? "opacity-100"
-                            : "opacity-0"
-                        )}
-                      />
-                      {customer.name} {customer.lastName}
-                    </CommandItem>
-                  ))}
-                  {hasMore && (isLoadingMore || isLoading) && (
-                    <CommandItem disabled>
-                      <Spinner className="h-4 w-4 mr-2" />
-                      Cargando más...
-                    </CommandItem>
-                  )}
-                </InfiniteScroll>
-              </CommandGroup>
-              <CommandEmpty>
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Spinner className="h-4 w-4 mr-2" />
-                    Cargando...
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2 py-2">
-                    <span className="text-sm text-muted-foreground text-center">
-                      No se encontraron clientes
-                    </span>
-                  </div>
-                )}
-              </CommandEmpty>
+              {allCustomers.length > 0 || isLoading ? (
+                <CommandGroup>
+                  <InfiniteScroll
+                    hasMore={hasMore}
+                    isLoading={isLoadingMore || isLoading}
+                    next={loadNextPage}
+                    threshold={1}
+                  >
+                    {allCustomers.map((customer) => (
+                      <CommandItem
+                        key={customer.id}
+                        value={`${customer.name} ${customer.lastName}`}
+                        onSelect={() => {
+                          onValueChange(customer);
+                          setOpen(false);
+                          setSearchQuery("");
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            value?.id === customer.id
+                              ? "opacity-100"
+                              : "opacity-0"
+                          )}
+                        />
+                        {customer.name} {customer.lastName}
+                      </CommandItem>
+                    ))}
+                    {hasMore && (isLoadingMore || isLoading) && (
+                      <CommandItem disabled>
+                        <Spinner className="h-4 w-4 mr-2" />
+                        Cargando más...
+                      </CommandItem>
+                    )}
+                  </InfiniteScroll>
+                </CommandGroup>
+              ) : (
+                <CommandGroup>
+                  <CommandItem disabled>
+                    {isLoading ? (
+                      <div className="flex items-center justify-center py-4 w-full">
+                        <Spinner className="h-4 w-4 mr-2" />
+                        Cargando...
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2 py-2 w-full">
+                        <span className="text-sm text-muted-foreground text-center">
+                          No se encontraron clientes
+                        </span>
+                      </div>
+                    )}
+                  </CommandItem>
+                </CommandGroup>
+              )}
             </CommandList>
           </Command>
         </PopoverContent>
