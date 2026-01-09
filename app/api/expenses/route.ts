@@ -3,6 +3,7 @@ import { expenseService } from "@/services/expense-service";
 import { createExpenseSchema } from "@/validators/expense";
 import { AppError } from "@/errors";
 import { z } from "zod";
+import { dateStringToUTCRange } from "@/utils/timezone";
 
 export async function POST(request: Request) {
   try {
@@ -49,23 +50,26 @@ export async function GET(request: Request) {
     const fromDate = searchParams.get("from_date");
     const toDate = searchParams.get("to_date");
 
-    let from: Date | undefined;
-    let to: Date | undefined;
+    if (!fromDate || !toDate) {
+      return NextResponse.json(
+        { error: "from_date and to_date are required" },
+        { status: 400 }
+      );
+    }
 
-    if (fromDate) {
-      // Parse date string (should be YYYY-MM-DD format from frontend)
-      // If it's an ISO string, extract just the date part
-      const fromDateStr = fromDate.includes("T")
-        ? fromDate.split("T")[0]
-        : fromDate;
-      from = new Date(fromDateStr);
-    }
-    if (toDate) {
-      // Parse date string (should be YYYY-MM-DD format from frontend)
-      // If it's an ISO string, extract just the date part
-      const toDateStr = toDate.includes("T") ? toDate.split("T")[0] : toDate;
-      to = new Date(toDateStr);
-    }
+    // Parse date strings (should be in YYYY-MM-DD format from frontend)
+    // If it's an ISO string, extract just the date part
+    const fromDateStr = fromDate.includes("T")
+      ? fromDate.split("T")[0]
+      : fromDate;
+    const toDateStr = toDate.includes("T") ? toDate.split("T")[0] : toDate;
+
+    // Convert local date ranges (Monterrey timezone) to UTC ranges for querying
+    const fromRange = dateStringToUTCRange(fromDateStr);
+    const toRange = dateStringToUTCRange(toDateStr);
+
+    const from = fromRange.start;
+    const to = toRange.end;
 
     // Get all expenses
     const expenses = await expenseService.getAllExpenses(from, to);

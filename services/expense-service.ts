@@ -69,33 +69,15 @@ export class ExpenseService {
     return expense;
   }
 
-  async getAllExpenses(fromDate?: Date, toDate?: Date) {
-    const where: {
-      timestamp?: {
-        gte?: Date;
-        lte?: Date;
-      };
-    } = {};
-
-    if (fromDate || toDate) {
-      where.timestamp = {};
-      if (fromDate) {
-        // Convert local date to UTC range
-        const fromDateStr = fromDate.toISOString().split("T")[0];
-        const fromRange = dateStringToUTCRange(fromDateStr);
-        where.timestamp.gte = fromRange.start;
-      }
-      if (toDate) {
-        // Convert local date to UTC range
-        const toDateStr = toDate.toISOString().split("T")[0];
-        const toRange = dateStringToUTCRange(toDateStr);
-        where.timestamp.lte = toRange.end;
-      }
-    }
-
+  async getAllExpenses(from: Date, to: Date) {
     // Get all expenses
     const expenses = await prisma.expense.findMany({
-      where,
+      where: {
+        timestamp: {
+          gte: from,
+          lte: to,
+        },
+      },
       include: {
         user: {
           select: {
