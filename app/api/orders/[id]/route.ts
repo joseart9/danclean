@@ -47,13 +47,13 @@ export async function PATCH(
 
     console.log("timestamp", timestamp);
 
-    // Validate request body
+    // Validate request body (includes silent flag if provided)
     const validatedData = updateOrderSchema.parse({
       ...data,
       timestamp,
     });
 
-    // Update order
+    // Update order (silent flag is already in validatedData if provided)
     const updatedOrder = await orderService.updateOrder(id, validatedData);
 
     return NextResponse.json(updatedOrder, { status: 200 });

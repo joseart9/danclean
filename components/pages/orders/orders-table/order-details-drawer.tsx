@@ -127,6 +127,7 @@ export function OrderDetailsDrawer({
     setIsSaving(true);
     try {
       // Update order with new customer if changed
+      // Set silent: true to prevent WhatsApp notifications when editing from drawer
       const updatedOrderResponse = await apiClient.patch(
         `/orders/${displayOrder.id}`,
         {
@@ -137,6 +138,7 @@ export function OrderDetailsDrawer({
           totalPaid: formData.totalPaid,
           ticketNumber: formData.ticketNumber,
           timestamp: displayOrder.timestamp,
+          silent: true, // Silent edit - no WhatsApp notifications
         }
       );
 
@@ -230,7 +232,7 @@ export function OrderDetailsDrawer({
                   </Field>
                   <Field>
                     <FieldLabel className="text-sm text-muted-foreground">
-                      Número de Ticket
+                      Número de Nota
                     </FieldLabel>
                     <FieldContent>
                       {isEditing ? (
@@ -420,7 +422,7 @@ export function OrderDetailsDrawer({
                             </SelectContent>
                           </Select>
                         ) : (
-                          <p className="font-medium">
+                          <p className="font-medium uppercase">
                             {paymentMethodLabels[displayOrder.paymentMethod]}
                           </p>
                         )}
@@ -455,7 +457,7 @@ export function OrderDetailsDrawer({
                             </SelectContent>
                           </Select>
                         ) : (
-                          <p className="font-medium">
+                          <p className="font-medium uppercase">
                             {paymentStatusLabels[displayOrder.paymentStatus]}
                           </p>
                         )}

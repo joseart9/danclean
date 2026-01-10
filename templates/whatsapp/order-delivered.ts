@@ -6,7 +6,7 @@ export function getOrderDeliveredMessage(data: {
 }): string {
   return `¡Hola ${data.customerName}!
 
-Tu orden #${data.ticketNumber} (${data.orderType}) ha sido entregada exitosamente.
+Tu orden *#${data.ticketNumber}* ha sido entregada exitosamente.
 
 Esperamos que estés satisfecho con nuestro servicio. ¡Gracias por elegir Dan Clean!
 

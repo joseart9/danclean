@@ -860,7 +860,7 @@ export class OrderService {
     });
 
     if (!order) {
-      throw new OrderNotFoundError(`número de ticket ${ticketNumber}`);
+      throw new OrderNotFoundError(`número de nota ${ticketNumber}`);
     }
 
     // Enrich with actual items
@@ -871,6 +871,7 @@ export class OrderService {
   async updateOrder(id: string, data: UpdateOrderInput) {
     // Get the latest version of the order
     const latestOrder = await this.getLatestOrderVersion(id);
+    const silent = data.silent ?? false; // Default to false if not provided (silent edit mode)
 
     // For updates, we create a new order with the updated data and link it to the main order
     // This maintains order history
@@ -996,8 +997,9 @@ export class OrderService {
     const enrichedOrders = await this.enrichOrdersWithItems([updatedOrder!]);
     const enrichedOrder = enrichedOrders[0];
 
-    // Send WhatsApp notifications for status changes
+    // Send WhatsApp notifications for status changes (unless silent mode is enabled)
     if (
+      !silent &&
       enrichedOrder.customer &&
       typeof enrichedOrder.customer === "object" &&
       "name" in enrichedOrder.customer &&

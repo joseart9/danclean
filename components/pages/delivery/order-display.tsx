@@ -208,7 +208,7 @@ export function OrderDisplay({ order }: OrderDisplayProps) {
             Método de Pago
           </FieldLabel>
           <FieldContent>
-            <p className="font-medium">
+            <p className="font-medium uppercase">
               {paymentMethodLabels[order.paymentMethod]}
             </p>
           </FieldContent>

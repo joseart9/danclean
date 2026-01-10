@@ -79,9 +79,10 @@ export const updateOrderSchema = z.object({
   ticketNumber: z
     .number()
     .int()
-    .nonnegative("El número de ticket debe ser no negativo")
+    .nonnegative("El número de nota debe ser no negativo")
     .optional(),
   timestamp: z.date(),
+  silent: z.boolean().optional(), // If true, skip WhatsApp notifications
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
