@@ -20,22 +20,22 @@ export function OrderSearchForm({
   onOrderFound,
   onMultipleOrdersFound,
 }: OrderSearchFormProps) {
-  const [orderNumber, setOrderNumber] = useState<string>("");
+  const [ticketNumber, setTicketNumber] = useState<string>("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
   const [isSearching, setIsSearching] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("order-number");
+  const [activeTab, setActiveTab] = useState<string>("ticket-number");
 
-  const handleSearchByOrderNumber = async () => {
-    if (!orderNumber.trim()) {
-      toast.error("Por favor ingresa un número de orden");
+  const handleSearchByTicketNumber = async () => {
+    if (!ticketNumber.trim()) {
+      toast.error("Por favor ingresa un número de nota");
       return;
     }
 
-    const orderNumberInt = parseInt(orderNumber, 10);
-    if (isNaN(orderNumberInt) || orderNumberInt <= 0) {
-      toast.error("Por favor ingresa un número de orden válido");
+    const ticketNumberInt = parseInt(ticketNumber, 10);
+    if (isNaN(ticketNumberInt) || ticketNumberInt <= 0) {
+      toast.error("Por favor ingresa un número de nota válido");
       return;
     }
 
@@ -43,7 +43,8 @@ export function OrderSearchForm({
     try {
       const response = await apiClient.get<FullOrder>("/orders", {
         params: {
-          order_number: orderNumberInt,
+          ticket_number: ticketNumberInt,
+          exclude_delivered: "true",
         },
       });
 
@@ -109,8 +110,8 @@ export function OrderSearchForm({
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      if (activeTab === "order-number") {
-        handleSearchByOrderNumber();
+      if (activeTab === "ticket-number") {
+        handleSearchByTicketNumber();
       } else {
         handleSearchByCustomer();
       }
@@ -120,22 +121,22 @@ export function OrderSearchForm({
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="mb-4">
-        <TabsTrigger value="order-number">Número de Orden</TabsTrigger>
+        <TabsTrigger value="ticket-number">Número de Nota</TabsTrigger>
         <TabsTrigger value="customer">Cliente</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="order-number" className="space-y-4">
+      <TabsContent value="ticket-number" className="space-y-4">
         <div className="flex w-full gap-2">
           <Input
             type="number"
-            placeholder="Número de orden"
-            value={orderNumber}
-            onChange={(e) => setOrderNumber(e.target.value)}
+            placeholder="Número de nota"
+            value={ticketNumber}
+            onChange={(e) => setTicketNumber(e.target.value)}
             onKeyPress={handleKeyPress}
             disabled={isSearching}
             className="w-full"
           />
-          <Button onClick={handleSearchByOrderNumber} disabled={isSearching}>
+          <Button onClick={handleSearchByTicketNumber} disabled={isSearching}>
             {isSearching ? (
               <>
                 <Spinner />

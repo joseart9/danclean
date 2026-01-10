@@ -151,7 +151,7 @@ export const createColumns = (
   },
   {
     accessorKey: "ticketNumber",
-    header: "# Ticket",
+    header: "# Nota",
     cell: ({ row }) => {
       return <div className="font-medium">{row.original.ticketNumber}</div>;
     },

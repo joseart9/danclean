@@ -50,7 +50,6 @@ export class OrderService {
    * @returns Next ticket number
    */
   private async getNextTicketNumber(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tx?: any // Prisma transaction client - type will be available after prisma generate
   ) {
     const client = tx || prisma;
@@ -631,14 +630,49 @@ export class OrderService {
       where.status = { not: OrderStatus.DELIVERED };
     }
 
-    // Add search by customer name if searchQuery is provided
+    // Add search by customer name or ticket_number if searchQuery is provided
     if (searchQuery) {
-      where.customer = {
-        OR: [
-          { name: { contains: searchQuery, mode: "insensitive" } },
-          { lastName: { contains: searchQuery, mode: "insensitive" } },
-        ],
-      };
+      // Check if searchQuery is numeric (ticket_number) or text (customer name)
+      const ticketNumberInt = parseInt(searchQuery, 10);
+      const isNumeric = !isNaN(ticketNumberInt) && ticketNumberInt > 0;
+
+      if (isNumeric) {
+        // Search by ticket_number with partial matching (prefix match)
+        // For example, searching "31" should match 31, 310, 3119, 31001, etc.
+        // We use OR with multiple ranges for different digit lengths
+        const searchStr = searchQuery.trim();
+        const searchLen = searchStr.length;
+        const ranges: Array<{ ticketNumber: { gte: number; lte: number } }> =
+          [];
+
+        // Generate ranges for common ticket number lengths (up to 6 digits)
+        // For "31": matches 31, 310-319, 3100-3199, 31000-31999, 310000-319999
+        for (let digits = searchLen; digits <= 6; digits++) {
+          const min = ticketNumberInt * Math.pow(10, digits - searchLen);
+          const max = min + Math.pow(10, digits - searchLen) - 1;
+          ranges.push({
+            ticketNumber: {
+              gte: min,
+              lte: max,
+            },
+          });
+        }
+
+        // If only one range, use it directly; otherwise use OR
+        if (ranges.length === 1) {
+          where.ticketNumber = ranges[0].ticketNumber;
+        } else {
+          where.OR = ranges;
+        }
+      } else {
+        // Search by customer name (partial match for text queries)
+        where.customer = {
+          OR: [
+            { name: { contains: searchQuery, mode: "insensitive" } },
+            { lastName: { contains: searchQuery, mode: "insensitive" } },
+          ],
+        };
+      }
     }
 
     // Get total count
@@ -773,6 +807,60 @@ export class OrderService {
 
     if (!order) {
       throw new OrderNotFoundError(`número de orden ${orderNumber}`);
+    }
+
+    // Enrich with actual items
+    const enrichedOrders = await this.enrichOrdersWithItems([order]);
+    return enrichedOrders[0];
+  }
+
+  async getOrderByTicketNumber(
+    ticketNumber: number,
+    excludeDelivered: boolean = true
+  ) {
+    // Get the main order (isMainOrder = true) for this ticket number
+    const where: {
+      ticketNumber: number;
+      isMainOrder: boolean;
+      status?: { not: OrderStatus };
+    } = {
+      ticketNumber,
+      isMainOrder: true,
+    };
+
+    if (excludeDelivered) {
+      where.status = { not: OrderStatus.DELIVERED };
+    }
+
+    const order = await prisma.order.findFirst({
+      where,
+      include: {
+        customer: true,
+        orderItems: true,
+        storage: true,
+        mainOrder: true,
+        orderHistory: {
+          include: {
+            user: {
+              omit: {
+                password: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        user: {
+          omit: {
+            password: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new OrderNotFoundError(`número de ticket ${ticketNumber}`);
     }
 
     // Enrich with actual items

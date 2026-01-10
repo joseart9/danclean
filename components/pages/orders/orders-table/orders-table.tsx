@@ -69,7 +69,7 @@ export function OrdersTable({
         enableColumnResizing={true}
         enableSorting={true}
         enableSortingRemoval={true}
-        searchOnNamePlaceholder="Buscar por cliente"
+        searchOnNamePlaceholder="Buscar por cliente o nota"
         onRowClick={handleRowClick}
         enablePagination={true}
         page={page}

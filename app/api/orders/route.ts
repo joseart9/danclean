@@ -73,6 +73,8 @@ export async function GET(request: Request) {
       searchParams.get("customer_id") || searchParams.get("customerId");
     const orderStatus = searchParams.get("order_status");
     const orderNumber = searchParams.get("order_number");
+    const ticketNumber =
+      searchParams.get("ticket_number") || searchParams.get("ticketNumber");
 
     // Validate order_status if provided
     let status: OrderStatus | undefined;
@@ -90,6 +92,25 @@ export async function GET(request: Request) {
         );
       }
       status = orderStatus as OrderStatus;
+    }
+
+    // If ticketNumber is provided, get order by ticket number
+    if (ticketNumber) {
+      const ticketNumberInt = parseInt(ticketNumber, 10);
+      if (isNaN(ticketNumberInt)) {
+        return NextResponse.json(
+          { error: "ticket_number debe ser un número válido" },
+          { status: 400 }
+        );
+      }
+      // For delivery search, exclude delivered orders (default behavior)
+      const excludeDelivered =
+        searchParams.get("exclude_delivered") !== "false";
+      const order = await orderService.getOrderByTicketNumber(
+        ticketNumberInt,
+        excludeDelivered
+      );
+      return NextResponse.json(order, { status: 200 });
     }
 
     // If orderNumber is provided, get order by order number

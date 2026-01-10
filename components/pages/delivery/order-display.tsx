@@ -134,7 +134,7 @@ export function OrderDisplay({ order }: OrderDisplayProps) {
         </Field>
         <Field>
           <FieldLabel className="text-sm text-muted-foreground">
-            Número de Ticket
+            Número de Nota
           </FieldLabel>
           <FieldContent>
             <p className="font-medium">{order.ticketNumber.toLocaleString()}</p>

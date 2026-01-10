@@ -45,7 +45,7 @@ export const columns: ColumnDef<Expense>[] = [
   },
   {
     accessorKey: "user",
-    header: "Usuario",
+    header: "Creado por",
     accessorFn: (row) => `${row.user.name} ${row.user.lastName}`,
     cell: ({ row }) => {
       return (
