@@ -4,6 +4,7 @@ export function getOrderCreatedMessage(data: {
   orderType: string;
   total: number;
   totalPaid: number;
+  ticketNumber: number;
 }): string {
   const remaining = data.total - data.totalPaid;
   const hasMissingPayment = remaining > 0;
@@ -15,7 +16,7 @@ export function getOrderCreatedMessage(data: {
 
   return `¡Hola ${data.customerName}!
 
-Tu orden #${data.orderNumber} ha sido creada exitosamente.
+Tu orden #${data.ticketNumber} ha sido creada exitosamente.
 
 Tipo: ${data.orderType}
 Total: $${data.total.toFixed(2)}

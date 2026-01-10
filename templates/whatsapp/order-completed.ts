@@ -2,10 +2,11 @@ export function getOrderCompletedMessage(data: {
   customerName: string;
   orderNumber: number;
   orderType: string;
+  ticketNumber: number;
 }): string {
   return `¡Hola ${data.customerName}!
 
-Tu orden #${data.orderNumber} (${data.orderType}) está lista para ser recogida.
+Tu orden #${data.ticketNumber} (${data.orderType}) está lista para ser recogida.
 
 Puedes pasar a recogerla cuando te sea conveniente.
 

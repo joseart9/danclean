@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // DB
 import { prisma } from "@/db";
 import type {
@@ -431,6 +432,7 @@ export class OrderService {
           orderType: orderTypeText,
           total: enrichedOrder.total,
           totalPaid: enrichedOrder.totalPaid,
+          ticketNumber: enrichedOrder.ticketNumber,
         });
         await this.sendWhatsAppNotification(customer.phone, message);
       }
@@ -534,6 +536,7 @@ export class OrderService {
         orderType: orderTypeText,
         total: enrichedOrder.total,
         totalPaid: enrichedOrder.totalPaid,
+        ticketNumber: enrichedOrder.ticketNumber,
       });
       await this.sendWhatsAppNotification(customer.phone, message);
     }
@@ -929,6 +932,7 @@ export class OrderService {
           customerName: customer.name,
           orderNumber: enrichedOrder.orderNumber,
           orderType: orderTypeText,
+          ticketNumber: enrichedOrder.ticketNumber,
         });
         await this.sendWhatsAppNotification(customer.phone, message);
       }
@@ -942,6 +946,7 @@ export class OrderService {
           customerName: customer.name,
           orderNumber: enrichedOrder.orderNumber,
           orderType: orderTypeText,
+          ticketNumber: enrichedOrder.ticketNumber,
         });
         await this.sendWhatsAppNotification(customer.phone, message);
       }
