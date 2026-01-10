@@ -10,7 +10,7 @@ Tu orden *#${data.ticketNumber}* está lista para ser recogida.
 
 Puedes pasar a recogerla cuando te sea conveniente.
 
-¡Gracias por tu paciencia!
+¡Gracias por tu preferencia!
 
 - Dan Clean`;
 }
