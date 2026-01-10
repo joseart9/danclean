@@ -141,8 +141,24 @@ const DataTable = <TData,>({
 }: DataTableProps<TData>) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
+  // Helper function to get column ID (either id or accessorKey)
+  const getColumnId = (column: ColumnDef<TData>, index: number): string => {
+    if (column.id) return column.id;
+    if ("accessorKey" in column && typeof column.accessorKey === "string") {
+      return column.accessorKey;
+    }
+    // Fallback to index if neither id nor accessorKey exists
+    return `column-${index}`;
+  };
+
+  // Initialize column order based on columns array order
+  const getInitialColumnOrder = (): string[] => {
+    return columns.map((column, index) => getColumnId(column, index));
+  };
+
   const [columnOrder, setColumnOrder] = useState<string[]>(
-    columns.map((column) => column.id as string)
+    getInitialColumnOrder()
   );
   const [rowSelection, setRowSelection] = useState({});
   const [internalSearchValue, setInternalSearchValue] = useState(
@@ -173,11 +189,8 @@ const DataTable = <TData,>({
   // Initialize column visibility based on defaultHidden property
   const getInitialColumnVisibility = (): VisibilityState => {
     const visibility: VisibilityState = {};
-    columns.forEach((column) => {
-      const columnId = (column.id ||
-        ("accessorKey" in column && typeof column.accessorKey === "string"
-          ? column.accessorKey
-          : undefined)) as string;
+    columns.forEach((column, index) => {
+      const columnId = getColumnId(column, index);
       if (columnId && (column as { defaultHidden?: boolean }).defaultHidden) {
         visibility[columnId] = false;
       }
@@ -379,13 +392,13 @@ const DataTable = <TData,>({
   // Set initial column sizes with "name" column being larger
   const getInitialColumnSizes = () => {
     const sizes: Record<string, number> = {};
-    columns.forEach((column) => {
-      const columnId = column.id as string;
+    columns.forEach((column, index) => {
+      const columnId = getColumnId(column, index);
       if (
         columnId === "name" ||
         ("accessorKey" in column && column.accessorKey === "name")
       ) {
-        sizes[columnId] = 300; // Make name column larger
+        sizes[columnId] = 180; // Make name column larger
       } else {
         sizes[columnId] = 150; // Default size for other columns
       }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DataTable } from "@/components/ui/data-table";
-import { columns } from "./columns";
+import { createColumns } from "./columns";
 import type { FullOrder } from "@/types/order";
 import { OrderDetailsDrawer } from "./order-details-drawer";
 import { Switch } from "@/components/ui/switch";
@@ -50,6 +50,12 @@ export function OrdersTable({
     // Update selected order if it was the one updated
     setIsDrawerOpen(false);
   };
+
+  // Create columns with callback to refresh orders
+  const columns = useMemo(
+    () => createColumns(() => onOrdersChange?.()),
+    [onOrdersChange]
+  );
 
   return (
     <>
