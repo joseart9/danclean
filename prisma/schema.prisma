@@ -8,16 +8,17 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique @map("email")
-  password  String    @map("password")
-  name      String    @map("name")
-  lastName  String    @map("last_name")
-  role      Role      @default(USER) @map("role")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  orders    Order[]
-  expenses  Expense[]
+  id            String         @id @default(uuid())
+  email         String         @unique @map("email")
+  password      String         @map("password")
+  name          String         @map("name")
+  lastName      String         @map("last_name")
+  role          Role           @default(USER) @map("role")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  orders        Order[]
+  expenses      Expense[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -115,7 +116,7 @@ model Order {
   storageId     String?            @map("storage_id")
   userId        String             @map("user_id")
   isMainOrder   Boolean            @default(true) @map("is_main_order")
-  ticketNumber  Int                @map("ticket_number") @default(0)
+  ticketNumber  Int                @default(0) @map("ticket_number")
   timestamp     DateTime           @default(now()) @map("timestamp")
   orderItems    OrderItem[]
   customer      Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -150,6 +151,29 @@ model Expense {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("expenses")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  title     String           @map("title")
+  message   String           @map("message")
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+  userId    String           @map("user_id")
+  isRead    Boolean          @default(false) @map("is_read")
+  isDeleted Boolean          @default(false) @map("is_deleted")
+  type      NotificationType @default(INFO) @map("type")
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  ERROR
+  INFO
+  WARNING
+  SUCCESS
+  CRITICAL
 }
 
 enum Role {

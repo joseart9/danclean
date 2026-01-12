@@ -31,11 +31,17 @@ import {
 } from "./utils/labels";
 import { apiClient } from "@/lib/axios";
 import { toast } from "sonner";
-import { EditIcon, TrashIcon, SaveIcon, XIcon } from "lucide-react";
+import { EditIcon, TrashIcon, SaveIcon, XIcon, Send } from "lucide-react";
 import { translateOrderStatus } from "@/utils/translate-order-status";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OrderHistoryTimeline } from "./utils/order-history-timeline";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  getOrderCreatedMessage,
+  getOrderCompletedMessage,
+  getOrderDeliveredMessage,
+} from "@/templates/whatsapp";
 
 interface OrderDetailsDrawerProps {
   order: FullOrder | null;
@@ -65,6 +71,9 @@ export function OrderDetailsDrawer({
     totalPaid: 0,
     ticketNumber: 0,
   });
+  const [isSendingCreated, setIsSendingCreated] = useState(false);
+  const [isSendingCompleted, setIsSendingCompleted] = useState(false);
+  const [isSendingDelivered, setIsSendingDelivered] = useState(false);
 
   // Fetch full order details when drawer opens
   useEffect(() => {
@@ -120,6 +129,87 @@ export function OrderDetailsDrawer({
   const displayOrder = fullOrder || order;
 
   if (!displayOrder) return null;
+
+  // Send WhatsApp messages
+  const handleSendWhatsAppMessage = async (
+    message: string,
+    type: "created" | "completed" | "delivered"
+  ) => {
+    if (!displayOrder.customer?.phone) {
+      toast.error("El cliente no tiene número de teléfono registrado");
+      return;
+    }
+
+    const setLoading = {
+      created: setIsSendingCreated,
+      completed: setIsSendingCompleted,
+      delivered: setIsSendingDelivered,
+    }[type];
+
+    setLoading(true);
+    try {
+      // Clean phone number (remove +, spaces, dashes, etc.)
+      const cleanPhone = displayOrder.customer.phone.replace(/[\s+\-()]/g, "");
+
+      await apiClient.post("/whatsapp/send-msg", {
+        to: cleanPhone,
+        message,
+      });
+
+      toast.success("Mensaje de WhatsApp enviado correctamente");
+    } catch (error: unknown) {
+      console.error("Error sending WhatsApp message:", error);
+      const errorMessage =
+        error && typeof error === "object" && "response" in error
+          ? (error as { response?: { data?: { error?: string } } }).response
+              ?.data?.error
+          : undefined;
+      toast.error(errorMessage || "Error al enviar mensaje de WhatsApp");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendOrderCreated = () => {
+    if (!displayOrder) return;
+    const orderTypeText =
+      displayOrder.type === OrderType.IRONING ? "Planchado" : "Tintorería";
+    const message = getOrderCreatedMessage({
+      customerName: displayOrder.customer.name,
+      orderNumber: displayOrder.orderNumber,
+      orderType: orderTypeText,
+      total: displayOrder.total,
+      totalPaid: displayOrder.totalPaid,
+      ticketNumber: displayOrder.ticketNumber,
+    });
+    handleSendWhatsAppMessage(message, "created");
+  };
+
+  const handleSendOrderCompleted = () => {
+    if (!displayOrder) return;
+    const orderTypeText =
+      displayOrder.type === OrderType.IRONING ? "Planchado" : "Lavado";
+    const message = getOrderCompletedMessage({
+      customerName: displayOrder.customer.name,
+      orderNumber: displayOrder.orderNumber,
+      orderType: orderTypeText,
+      ticketNumber: displayOrder.ticketNumber,
+    });
+    handleSendWhatsAppMessage(message, "completed");
+  };
+
+  const handleSendOrderDelivered = () => {
+    if (!displayOrder) return;
+    const orderTypeText =
+      displayOrder.type === OrderType.IRONING ? "Planchado" : "Lavado";
+    const message = getOrderDeliveredMessage({
+      customerName: displayOrder.customer.name,
+      orderNumber: displayOrder.orderNumber,
+      orderType: orderTypeText,
+      ticketNumber: displayOrder.ticketNumber,
+    });
+    handleSendWhatsAppMessage(message, "delivered");
+  };
 
   const handleSave = async () => {
     if (!displayOrder) return;
@@ -517,6 +607,75 @@ export function OrderDetailsDrawer({
                       </Field>
                     )}
                   </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* WhatsApp Messages */}
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg font-semibold">
+                  Reenviar Mensajes de WhatsApp
+                </h3>
+                <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleSendOrderCreated}
+                    disabled={isSendingCreated || !displayOrder.customer?.phone}
+                    className="w-full justify-start"
+                  >
+                    {isSendingCreated ? (
+                      <>
+                        <Spinner className="mr-2 h-4 w-4" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="mr-2 h-4 w-4" />
+                        Reenviar: Orden Recibida
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleSendOrderCompleted}
+                    disabled={
+                      isSendingCompleted || !displayOrder.customer?.phone
+                    }
+                    className="w-full justify-start"
+                  >
+                    {isSendingCompleted ? (
+                      <>
+                        <Spinner className="mr-2 h-4 w-4" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="mr-2 h-4 w-4" />
+                        Reenviar: Orden Completada
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleSendOrderDelivered}
+                    disabled={
+                      isSendingDelivered || !displayOrder.customer?.phone
+                    }
+                    className="w-full justify-start"
+                  >
+                    {isSendingDelivered ? (
+                      <>
+                        <Spinner className="mr-2 h-4 w-4" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="mr-2 h-4 w-4" />
+                        Reenviar: Orden Entregada
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
 

@@ -7,6 +7,7 @@ import type {
   IroningItem,
   CleaningItem,
 } from "@/generated/prisma/client";
+import { NotificationType } from "@/generated/prisma/client";
 
 // Errors
 import { OrderNotFoundError } from "@/errors";
@@ -22,6 +23,7 @@ import { ironingItemService } from "./ironing-item-service";
 import { cleaningItemService } from "./cleaning-item-service";
 import { storageService } from "./storage-service";
 import { whatsappService } from "./whatsapp-service";
+import { notificationService } from "./notification-service";
 
 // Context
 import { getUserId } from "@/lib/auth";
@@ -81,11 +83,14 @@ export class OrderService {
 
   /**
    * Helper method to send WhatsApp notification
-   * Silently fails if phone number is missing or message sending fails
+   * Creates notifications for success/error cases
    */
   private async sendWhatsAppNotification(
     phone: string | null | undefined,
-    message: string
+    message: string,
+    userId: string,
+    title: string,
+    errorMessage?: string
   ) {
     if (!phone) {
       return; // No phone number, skip notification
@@ -94,10 +99,37 @@ export class OrderService {
     try {
       // Clean phone number (remove +, spaces, dashes, etc.)
       const cleanPhone = phone.replace(/[\s+\-()]/g, "");
-      await whatsappService.sendMessage(cleanPhone, message);
+      const result = await whatsappService.sendMessage(cleanPhone, message);
+
+      // Create notification based on result
+      if (result.success) {
+        await notificationService.createNotification({
+          title,
+          message: `Mensaje de WhatsApp enviado correctamente. ${errorMessage || ""}`,
+          userId,
+          type: NotificationType.SUCCESS,
+        });
+      } else {
+        await notificationService.createNotification({
+          title,
+          message: `Error al enviar mensaje de WhatsApp: ${result.error || "Error desconocido"}. ${errorMessage || ""}`,
+          userId,
+          type: NotificationType.ERROR,
+        });
+      }
     } catch (error) {
-      // Silently fail - don't break order creation if WhatsApp fails
-      console.error("Failed to send WhatsApp notification:", error);
+      // Create error notification
+      const errorMsg =
+        error instanceof Error ? error.message : "Error desconocido";
+      await notificationService.createNotification({
+        title,
+        message: `Error al enviar mensaje de WhatsApp: ${errorMsg}. ${errorMessage || ""}`,
+        userId,
+        type: NotificationType.ERROR,
+      }).catch((notifError) => {
+        // Silently fail notification creation to not break the flow
+        console.error("Failed to create notification:", notifError);
+      });
     }
   }
 
@@ -433,7 +465,13 @@ export class OrderService {
           totalPaid: enrichedOrder.totalPaid,
           ticketNumber: enrichedOrder.ticketNumber,
         });
-        await this.sendWhatsAppNotification(customer.phone, message);
+        await this.sendWhatsAppNotification(
+          customer.phone,
+          message,
+          userId,
+          `Orden creada - Nota #${enrichedOrder.ticketNumber}`,
+          `Orden #${enrichedOrder.orderNumber} (${orderTypeText})`
+        );
       }
 
       return enrichedOrder;
@@ -537,7 +575,13 @@ export class OrderService {
         totalPaid: enrichedOrder.totalPaid,
         ticketNumber: enrichedOrder.ticketNumber,
       });
-      await this.sendWhatsAppNotification(customer.phone, message);
+      await this.sendWhatsAppNotification(
+        customer.phone,
+        message,
+        userId,
+        `Orden creada - Nota #${enrichedOrder.ticketNumber}`,
+        `Orden #${enrichedOrder.orderNumber} (${orderTypeText})`
+      );
     }
 
     return enrichedOrder;
@@ -1024,7 +1068,13 @@ export class OrderService {
           orderType: orderTypeText,
           ticketNumber: enrichedOrder.ticketNumber,
         });
-        await this.sendWhatsAppNotification(customer.phone, message);
+        await this.sendWhatsAppNotification(
+          customer.phone,
+          message,
+          userId,
+          `Orden completada - Nota #${enrichedOrder.ticketNumber}`,
+          `Orden #${enrichedOrder.orderNumber} (${orderTypeText})`
+        );
       }
 
       // Check if status changed to DELIVERED
@@ -1038,7 +1088,13 @@ export class OrderService {
           orderType: orderTypeText,
           ticketNumber: enrichedOrder.ticketNumber,
         });
-        await this.sendWhatsAppNotification(customer.phone, message);
+        await this.sendWhatsAppNotification(
+          customer.phone,
+          message,
+          userId,
+          `Orden entregada - Nota #${enrichedOrder.ticketNumber}`,
+          `Orden #${enrichedOrder.orderNumber} (${orderTypeText})`
+        );
       }
     }
 

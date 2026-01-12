@@ -74,6 +74,9 @@ function CompleteOrderButton({
 
       // Invalidate queries to refresh the orders list
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      // Invalidate notifications to show new notification immediately
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
 
       // Call callback to refresh
       onOrderUpdated?.();

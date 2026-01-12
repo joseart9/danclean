@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { WhatsAppStatusBadge } from "@/components/whatsapp-status-badge";
+import { NotificationsButton } from "@/components/notifications-button";
 import {
   DateRangeProvider,
   useDateRange,
@@ -49,6 +50,7 @@ function HeaderContent() {
           </>
         )}
         <WhatsAppStatusBadge />
+        <NotificationsButton />
         <ThemeSwitcher />
       </div>
     </header>

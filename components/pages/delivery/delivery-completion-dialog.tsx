@@ -22,6 +22,7 @@ import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/axios";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   OrderPaymentMethod,
   OrderPaymentStatus,
@@ -51,6 +52,7 @@ export function DeliveryCompletionDialog({
   onDeliveryCompleted,
 }: DeliveryCompletionDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [additionalPayment, setAdditionalPayment] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<OrderPaymentMethod>(
     order.paymentMethod
@@ -128,6 +130,10 @@ export function DeliveryCompletionDialog({
 
       // Update order: set status to DELIVERED, update totalPaid, and payment status
       await apiClient.patch(`/orders/${order.id}`, updateData);
+
+      // Invalidate notifications to show new notification immediately
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
 
       toast.success("Orden entregada correctamente");
       onDeliveryCompleted();

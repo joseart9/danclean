@@ -141,6 +141,9 @@ export function OrderCompletionDialog({
 
       // Invalidate orders query to refresh the orders table
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      // Invalidate notifications to show new notification immediately
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
 
       // Show order number dialog
       if (order?.orderNumber) {
