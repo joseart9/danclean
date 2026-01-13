@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // DB
 import { prisma } from "@/db";
 
@@ -32,9 +33,8 @@ export class NotificationService {
     skip?: number,
     type?: NotificationType
   ) {
-    // Build where clause
+    // Build where clause - global notifications, not filtered by userId
     const where: any = {
-      userId,
       isDeleted: false,
     };
 
@@ -61,9 +61,8 @@ export class NotificationService {
   }
 
   async getUnreadCount(userId: string, type?: NotificationType) {
-    // Build where clause
+    // Build where clause - global notifications, not filtered by userId
     const where: any = {
-      userId,
       isDeleted: false,
       isRead: false,
     };
@@ -81,11 +80,11 @@ export class NotificationService {
   }
 
   async markAsRead(notificationId: string, userId: string) {
-    // Check if notification exists and belongs to user
+    // Check if notification exists (global notifications, no userId check)
     const notification = await prisma.notification.findFirst({
       where: {
         id: notificationId,
-        userId,
+        isDeleted: false,
       },
     });
 
@@ -105,11 +104,11 @@ export class NotificationService {
   }
 
   async markAsDeleted(notificationId: string, userId: string) {
-    // Check if notification exists and belongs to user
+    // Check if notification exists (global notifications, no userId check)
     const notification = await prisma.notification.findFirst({
       where: {
         id: notificationId,
-        userId,
+        isDeleted: false,
       },
     });
 
