@@ -42,6 +42,8 @@ import {
   getOrderCompletedMessage,
   getOrderDeliveredMessage,
 } from "@/templates/whatsapp";
+import { useMe } from "@/hooks/useMe";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface OrderDetailsDrawerProps {
   order: FullOrder | null;
@@ -63,6 +65,8 @@ export function OrderDetailsDrawer({
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
+  const { data: currentUser } = useMe();
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     customerId: "",
     orderStatus: OrderStatus.PENDING,
@@ -140,11 +144,26 @@ export function OrderDetailsDrawer({
       return;
     }
 
+    if (!currentUser?.id) {
+      toast.error("No se pudo obtener la información del usuario");
+      return;
+    }
+
     const setLoading = {
       created: setIsSendingCreated,
       completed: setIsSendingCompleted,
       delivered: setIsSendingDelivered,
     }[type];
+
+    const messageTitles = {
+      created: `Orden recibida - Nota #${displayOrder.ticketNumber}`,
+      completed: `Orden completada - Nota #${displayOrder.ticketNumber}`,
+      delivered: `Orden entregada - Nota #${displayOrder.ticketNumber}`,
+    };
+
+    const orderTypeText =
+      displayOrder.type === OrderType.IRONING ? "Planchado" : "Lavado";
+    const contextMessage = `Orden #${displayOrder.orderNumber} (${orderTypeText})`;
 
     setLoading(true);
     try {
@@ -156,6 +175,24 @@ export function OrderDetailsDrawer({
         message,
       });
 
+      // Create success notification
+      try {
+        await apiClient.post("/notifications", {
+          title: messageTitles[type],
+          message: `Mensaje de WhatsApp enviado correctamente. ${contextMessage}`,
+          type: "SUCCESS",
+        });
+      } catch (notifError) {
+        // Silently fail notification creation to not break the flow
+        console.error("Failed to create notification:", notifError);
+      }
+
+      // Invalidate notifications to refresh
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", "unread-count"],
+      });
+
       toast.success("Mensaje de WhatsApp enviado correctamente");
     } catch (error: unknown) {
       console.error("Error sending WhatsApp message:", error);
@@ -164,6 +201,26 @@ export function OrderDetailsDrawer({
           ? (error as { response?: { data?: { error?: string } } }).response
               ?.data?.error
           : undefined;
+
+      // Create error notification
+      try {
+        await apiClient.post("/notifications", {
+          title: messageTitles[type],
+          message: `Error al enviar mensaje de WhatsApp: ${
+            errorMessage || "Error desconocido"
+          }. ${contextMessage}`,
+          type: "ERROR",
+        });
+        // Invalidate notifications to refresh
+        queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "unread-count"],
+        });
+      } catch (notifError) {
+        // Silently fail notification creation to not break the flow
+        console.error("Failed to create notification:", notifError);
+      }
+
       toast.error(errorMessage || "Error al enviar mensaje de WhatsApp");
     } finally {
       setLoading(false);
