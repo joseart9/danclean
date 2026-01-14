@@ -277,7 +277,8 @@ export function EditableOrderItems({
   const isIroning = order.type === OrderType.IRONING;
 
   // Parse items from order - items have id, quantity, total, and for cleaning: item_name
-  const getInitialItems = React.useCallback(() => {
+  // Memoize initial items to prevent recalculation on every render
+  const initialItems = React.useMemo(() => {
     if (isIroning) {
       const item = order.items as { id: string; quantity: number; total: number } | null;
       return item ? [item] : [];
@@ -293,7 +294,11 @@ export function EditableOrderItems({
     }
   }, [order.items, isIroning]);
 
-  const initialItems = getInitialItems();
+  // Track original item IDs (from database) - memoize to prevent infinite loops
+  const originalItemIds = React.useMemo(
+    () => new Set(initialItems.map((item) => (item as { id: string }).id)),
+    [initialItems]
+  );
 
   // State for IRONING
   const [ironingQuantity, setIroningQuantity] = React.useState<number>(
@@ -313,7 +318,7 @@ export function EditableOrderItems({
         total: number;
       };
       return {
-        id: cleaningItem.id || crypto.randomUUID(), // Preserve the item ID for updates, or generate new one
+        id: cleaningItem.id, // Use the actual database ID
         item_name: cleaningItem.item_name,
         quantity: cleaningItem.quantity,
         price: cleaningItem.total / cleaningItem.quantity, // Calculate price from total
@@ -326,16 +331,15 @@ export function EditableOrderItems({
   // Reset state when order changes or editing mode changes
   React.useEffect(() => {
     if (isEditing) {
-      const currentInitialItems = getInitialItems();
       if (isIroning) {
         setIroningQuantity(
-          currentInitialItems.length > 0
-            ? (currentInitialItems[0] as { quantity: number }).quantity
+          initialItems.length > 0
+            ? (initialItems[0] as { quantity: number }).quantity
             : 1
         );
       } else {
         setCleaningItems(
-          currentInitialItems.map((item) => {
+          initialItems.map((item) => {
             const cleaningItem = item as {
               id: string;
               item_name: string;
@@ -343,7 +347,7 @@ export function EditableOrderItems({
               total: number;
             };
             return {
-              id: cleaningItem.id || crypto.randomUUID(), // Preserve ID or generate new one
+              id: cleaningItem.id, // Use the actual database ID
               item_name: cleaningItem.item_name,
               quantity: cleaningItem.quantity,
               price: cleaningItem.total / cleaningItem.quantity,
@@ -352,16 +356,36 @@ export function EditableOrderItems({
         );
       }
     }
-  }, [order.id, isEditing, isIroning, getInitialItems]); // Reset when order changes or editing mode changes
+  }, [order.id, isEditing, isIroning, initialItems]);
 
-  // Update parent when items change
-  React.useEffect(() => {
+  // Update parent when items change - only send id for existing items (not temp UUIDs)
+  // Use useCallback-style memoization to prevent infinite loops
+  const itemsToSend = React.useMemo(() => {
+    if (!isEditing) return null;
+    
     if (isIroning) {
-      onItemsChange({ quantity: ironingQuantity });
+      return { quantity: ironingQuantity };
     } else {
-      onItemsChange(cleaningItems);
+      // Only include id if it's a real database ID (not a temp UUID)
+      return cleaningItems.map((item) => {
+        if (originalItemIds.has(item.id)) {
+          // This is an existing item - include the id
+          return item;
+        } else {
+          // This is a new item - exclude the id so backend creates it
+          const { id: _id, ...itemWithoutId } = item;
+          return itemWithoutId;
+        }
+      });
     }
-  }, [ironingQuantity, cleaningItems, isIroning, onItemsChange]);
+  }, [ironingQuantity, cleaningItems, isIroning, isEditing, originalItemIds]);
+
+  React.useEffect(() => {
+    if (itemsToSend !== null) {
+      onItemsChange(itemsToSend);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemsToSend]);
 
   const handleAddCleaningItem = () => {
     const firstItem = cleaningItemOptions[0];
