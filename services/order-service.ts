@@ -1101,6 +1101,176 @@ export class OrderService {
     return enrichedOrder;
   }
 
+  async updateOrderItems(
+    orderId: string,
+    items:
+      | { quantity: number } // For IRONING
+      | Array<{
+          id?: string; // Existing item ID (for updates) - this is the cleaning/ironing item ID
+          item_name: string;
+          quantity: number;
+          price: number;
+        }> // For CLEANING
+  ) {
+    // Get the latest version of the order
+    const latestOrder = await this.getLatestOrderVersion(orderId);
+
+    // Get the original order (main order) with its orderItems
+    const originalOrderId = latestOrder.mainOrderId || latestOrder.id;
+    const originalOrder = await prisma.order.findUnique({
+      where: { id: originalOrderId },
+      include: {
+        orderItems: true,
+      },
+    });
+
+    if (!originalOrder) {
+      throw new OrderNotFoundError(originalOrderId);
+    }
+
+    let newTotal = 0;
+    const newItemIds: string[] = [];
+
+    if (latestOrder.type === OrderType.IRONING) {
+      // Handle IRONING order
+      const ironingData = items as { quantity: number };
+      const ironingTotal = calculateIroningTotal(ironingData.quantity);
+      newTotal = ironingTotal;
+
+      // Find the existing ironing item via OrderItem
+      const existingOrderItem = originalOrder.orderItems.find(
+        (oi) => oi.type === OrderType.IRONING
+      );
+
+      if (existingOrderItem) {
+        // Update existing ironing item
+        await ironingItemService.updateIroningItem(existingOrderItem.itemId, {
+          quantity: ironingData.quantity,
+          total: ironingTotal,
+        });
+        newItemIds.push(existingOrderItem.itemId);
+      } else {
+        // Create new ironing item (shouldn't happen, but handle it)
+        const newIroningItem = await ironingItemService.createIroningItem({
+          quantity: ironingData.quantity,
+          total: ironingTotal,
+        });
+        newItemIds.push(newIroningItem.id);
+
+        // Create order item link
+        await prisma.orderItem.create({
+          data: {
+            type: OrderType.IRONING,
+            orderId: originalOrderId,
+            itemId: newIroningItem.id,
+          },
+        });
+      }
+    } else if (latestOrder.type === OrderType.CLEANING) {
+      // Handle CLEANING order
+      const cleaningData = items as Array<{
+        id?: string; // This is the cleaning item ID
+        item_name: string;
+        quantity: number;
+        price: number;
+      }>;
+
+      // Process each cleaning item
+      for (const itemData of cleaningData) {
+        const itemTotal = itemData.price * itemData.quantity;
+
+        if (itemData.id) {
+          // Update existing cleaning item (itemData.id is the cleaning item ID)
+          await cleaningItemService.updateCleaningItem(itemData.id, {
+            item_name: itemData.item_name,
+            quantity: itemData.quantity,
+            total: itemTotal,
+          });
+          newItemIds.push(itemData.id);
+        } else {
+          // Create new cleaning item
+          const newCleaningItem = await cleaningItemService.createCleaningItem({
+            item_name: itemData.item_name,
+            quantity: itemData.quantity,
+            total: itemTotal,
+          });
+          newItemIds.push(newCleaningItem.id);
+
+          // Create order item link
+          await prisma.orderItem.create({
+            data: {
+              type: OrderType.CLEANING,
+              orderId: originalOrderId,
+              itemId: newCleaningItem.id,
+            },
+          });
+        }
+      }
+
+      // Calculate total
+      newTotal = cleaningData.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      );
+
+      // Delete order items and items that are no longer in the list
+      const existingOrderItems = originalOrder.orderItems.filter(
+        (oi) => oi.type === OrderType.CLEANING
+      );
+
+      for (const orderItem of existingOrderItems) {
+        if (!newItemIds.includes(orderItem.itemId)) {
+          // This item was removed - delete the OrderItem link and the item itself
+          await prisma.orderItem.delete({ where: { id: orderItem.id } });
+          // Delete the cleaning item
+          await cleaningItemService.deleteCleaningItem(orderItem.itemId).catch(
+            () => {
+              // Item might already be deleted or used by another order
+            }
+          );
+        }
+      }
+    }
+
+    // Update the order total directly (as the user suggested)
+    await prisma.order.update({
+      where: { id: originalOrderId },
+      data: { total: newTotal },
+    });
+
+    // Return the updated order with relations
+    const updatedOrder = await prisma.order.findUnique({
+      where: { id: originalOrderId },
+      include: {
+        customer: true,
+        orderItems: true,
+        storage: true,
+        mainOrder: true,
+        orderHistory: {
+          include: {
+            user: {
+              omit: {
+                password: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        user: {
+          omit: {
+            password: true,
+          },
+        },
+      },
+    });
+
+    // Enrich with actual items
+    const enrichedOrders = await this.enrichOrdersWithItems([updatedOrder!]);
+    return enrichedOrders[0];
+  }
+
   async deleteOrder(id: string) {
     // Check if order exists
     const order = await prisma.order.findUnique({

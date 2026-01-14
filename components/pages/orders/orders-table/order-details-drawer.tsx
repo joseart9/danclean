@@ -22,7 +22,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { CustomerCombobox } from "@/components/pages/pos/order-form";
-import { OrderItemsDisplay } from "./utils/order-items";
+import { EditableOrderItems } from "./utils/editable-order-items";
 import { formatCurrency, formatDate } from "./utils/formatters";
 import {
   paymentMethodLabels,
@@ -41,9 +41,11 @@ import {
   getOrderCreatedMessage,
   getOrderCompletedMessage,
   getOrderDeliveredMessage,
+  getOrderItemsUpdatedMessage,
 } from "@/templates/whatsapp";
 import { useMe } from "@/hooks/useMe";
 import { useQueryClient } from "@tanstack/react-query";
+import { calculateIroningTotal, calculateCleaningTotal } from "@/utils";
 
 interface OrderDetailsDrawerProps {
   order: FullOrder | null;
@@ -78,6 +80,12 @@ export function OrderDetailsDrawer({
   const [isSendingCreated, setIsSendingCreated] = useState(false);
   const [isSendingCompleted, setIsSendingCompleted] = useState(false);
   const [isSendingDelivered, setIsSendingDelivered] = useState(false);
+  const [editedItems, setEditedItems] = useState<
+    | { quantity: number }
+    | Array<{ id?: string; item_name: string; quantity: number; price: number }>
+    | null
+  >(null);
+  const [isSavingItems, setIsSavingItems] = useState(false);
 
   // Fetch full order details when drawer opens
   useEffect(() => {
@@ -126,6 +134,7 @@ export function OrderDetailsDrawer({
         ticketNumber: fullOrder.ticketNumber,
       });
       setIsEditing(false);
+      setEditedItems(null); // Reset edited items when order changes
     }
   }, [fullOrder]);
 
@@ -268,6 +277,120 @@ export function OrderDetailsDrawer({
     handleSendWhatsAppMessage(message, "delivered");
   };
 
+  const handleSaveItems = async () => {
+    if (!displayOrder || !editedItems) return;
+
+    setIsSavingItems(true);
+    try {
+      // Store old total before update
+      const oldTotal = displayOrder.total;
+
+      // Update order items
+      const updatedOrderResponse = await apiClient.patch(
+        `/orders/${displayOrder.id}/items`,
+        {
+          items: editedItems,
+        }
+      );
+
+      const updatedOrder = updatedOrderResponse.data;
+      const newTotal = updatedOrder.total;
+
+      // Send WhatsApp message if customer has phone number
+      if (displayOrder.customer?.phone && currentUser?.id) {
+        try {
+          const orderTypeText =
+            displayOrder.type === OrderType.IRONING
+              ? "Planchado"
+              : "Tintorería";
+          const message = getOrderItemsUpdatedMessage({
+            customerName: displayOrder.customer.name,
+            ticketNumber: displayOrder.ticketNumber,
+            orderType: orderTypeText,
+            oldTotal,
+            newTotal,
+            totalPaid: displayOrder.totalPaid,
+          });
+
+          // Clean phone number (remove +, spaces, dashes, etc.)
+          const cleanPhone = displayOrder.customer.phone.replace(
+            /[\s+\-()]/g,
+            ""
+          );
+
+          await apiClient.post("/whatsapp/send-msg", {
+            to: cleanPhone,
+            message,
+          });
+
+          // Create success notification
+          try {
+            await apiClient.post("/notifications", {
+              title: `Items actualizados - Nota #${displayOrder.ticketNumber}`,
+              message: `Mensaje de WhatsApp enviado correctamente. Orden #${displayOrder.orderNumber} (${orderTypeText})`,
+              type: "SUCCESS",
+            });
+          } catch (notifError) {
+            // Silently fail notification creation to not break the flow
+            console.error("Failed to create notification:", notifError);
+          }
+
+          // Invalidate notifications to refresh
+          queryClient.invalidateQueries({ queryKey: ["notifications"] });
+          queryClient.invalidateQueries({
+            queryKey: ["notifications", "unread-count"],
+          });
+        } catch (whatsappError: unknown) {
+          console.error("Error sending WhatsApp message:", whatsappError);
+          const errorMessage =
+            whatsappError &&
+            typeof whatsappError === "object" &&
+            "response" in whatsappError
+              ? (
+                  whatsappError as {
+                    response?: { data?: { error?: string } };
+                  }
+                ).response?.data?.error
+              : undefined;
+
+          // Create error notification
+          try {
+            await apiClient.post("/notifications", {
+              title: `Items actualizados - Nota #${displayOrder.ticketNumber}`,
+              message: `Error al enviar mensaje de WhatsApp: ${
+                errorMessage || "Error desconocido"
+              }. Orden #${displayOrder.orderNumber}`,
+              type: "ERROR",
+            });
+            // Invalidate notifications to refresh
+            queryClient.invalidateQueries({ queryKey: ["notifications"] });
+            queryClient.invalidateQueries({
+              queryKey: ["notifications", "unread-count"],
+            });
+          } catch (notifError) {
+            // Silently fail notification creation to not break the flow
+            console.error("Failed to create notification:", notifError);
+          }
+        }
+      }
+
+      toast.success("Prendas actualizadas correctamente");
+      setFullOrder(updatedOrder);
+      setEditedItems(null);
+      onOrderUpdated?.(updatedOrder);
+    } catch (error: unknown) {
+      console.error("Error updating order items:", error);
+      const errorMessage =
+        error && typeof error === "object" && "response" in error
+          ? (error as { response?: { data?: { error?: string } } }).response
+              ?.data?.error
+          : undefined;
+      toast.error(errorMessage || "Error al actualizar los items de la orden");
+    } finally {
+      setIsSavingItems(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!displayOrder) return;
 
@@ -291,6 +414,7 @@ export function OrderDetailsDrawer({
 
       toast.success("Orden actualizada correctamente");
       setIsEditing(false);
+      setFullOrder(updatedOrderResponse.data);
       onOrderUpdated?.(updatedOrderResponse.data);
     } catch (error: unknown) {
       console.error("Error updating order:", error);
@@ -527,10 +651,61 @@ export function OrderDetailsDrawer({
 
               <Separator />
 
-              {/* Items - Display only */}
+              {/* Items - Editable when editing */}
               <div className="flex flex-col gap-3">
-                <h3 className="text-lg font-semibold">Piezas</h3>
-                <OrderItemsDisplay order={displayOrder} />
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Piezas</h3>
+                  {isEditing && editedItems && (
+                    <Button
+                      onClick={handleSaveItems}
+                      disabled={isSavingItems}
+                      size="sm"
+                    >
+                      {isSavingItems ? (
+                        <>
+                          <Spinner className="h-4 w-4 mr-2" />
+                          Guardando...
+                        </>
+                      ) : (
+                        <>
+                          <SaveIcon className="h-4 w-4 mr-2" />
+                          Guardar cambios
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+                <EditableOrderItems
+                  order={displayOrder}
+                  isEditing={isEditing}
+                  onItemsChange={setEditedItems}
+                />
+                {isEditing && editedItems && (
+                  <div className="flex justify-end pt-2 border-t">
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">
+                        Nuevo total:
+                      </p>
+                      <p className="text-lg font-bold">
+                        {displayOrder.type === OrderType.IRONING
+                          ? formatCurrency(
+                              calculateIroningTotal(
+                                (editedItems as { quantity: number }).quantity
+                              )
+                            )
+                          : formatCurrency(
+                              calculateCleaningTotal(
+                                editedItems as Array<{
+                                  item_name: string;
+                                  quantity: number;
+                                  price: number;
+                                }>
+                              )
+                            )}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <Separator />
@@ -804,16 +979,39 @@ export function OrderDetailsDrawer({
             <>
               <Button
                 variant="outline"
-                onClick={handleCancel}
-                disabled={isSaving}
+                onClick={() => {
+                  handleCancel();
+                  setEditedItems(null);
+                }}
+                disabled={isSaving || isSavingItems}
                 className="flex-1 sm:flex-initial"
               >
                 <XIcon className="mr-2 h-4 w-4" />
                 Cancelar
               </Button>
+              {editedItems && (
+                <Button
+                  onClick={handleSaveItems}
+                  disabled={isSavingItems}
+                  variant="secondary"
+                  className="flex-1 sm:flex-initial"
+                >
+                  {isSavingItems ? (
+                    <>
+                      <Spinner className="h-4 w-4 mr-2" />
+                      Guardando items...
+                    </>
+                  ) : (
+                    <>
+                      <SaveIcon className="mr-2 h-4 w-4" />
+                      Guardar items
+                    </>
+                  )}
+                </Button>
+              )}
               <Button
                 onClick={handleSave}
-                disabled={isSaving}
+                disabled={isSaving || isSavingItems}
                 className="flex-1 sm:flex-initial"
               >
                 <SaveIcon className="mr-2 h-4 w-4" />
@@ -831,7 +1029,35 @@ export function OrderDetailsDrawer({
                 Eliminar
               </Button>
               <Button
-                onClick={() => setIsEditing(true)}
+                onClick={() => {
+                  setIsEditing(true);
+                  // Initialize edited items based on current order
+                  if (displayOrder.type === OrderType.IRONING) {
+                    const item = displayOrder.items as {
+                      quantity: number;
+                    } | null;
+                    setEditedItems(
+                      item ? { quantity: item.quantity } : { quantity: 1 }
+                    );
+                  } else {
+                    const items = Array.isArray(displayOrder.items)
+                      ? (displayOrder.items as Array<{
+                          id: string;
+                          item_name: string;
+                          quantity: number;
+                          total: number;
+                        }>)
+                      : [];
+                    setEditedItems(
+                      items.map((item) => ({
+                        id: item.id,
+                        item_name: item.item_name,
+                        quantity: item.quantity,
+                        price: item.total / item.quantity,
+                      }))
+                    );
+                  }
+                }}
                 className="flex-1 sm:flex-initial"
               >
                 <EditIcon className="mr-2 h-4 w-4" />
