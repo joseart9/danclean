@@ -4,7 +4,6 @@ import * as React from "react";
 import { OrderType } from "@/types/order";
 import type { FullOrder } from "@/types/order";
 import { formatCurrency } from "./formatters";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
@@ -39,7 +38,12 @@ interface EditableOrderItemsProps {
   onItemsChange: (
     items:
       | { quantity: number }
-      | Array<{ id?: string; item_name: string; quantity: number; price: number }>
+      | Array<{
+          id?: string;
+          item_name: string;
+          quantity: number;
+          price: number;
+        }>
   ) => void;
 }
 
@@ -135,9 +139,7 @@ function EditableCleaningItemForm({
                     onValueChange={setSearchQuery}
                   />
                   <CommandList>
-                    <CommandEmpty>
-                      No se encontraron prendas
-                    </CommandEmpty>
+                    <CommandEmpty>No se encontraron prendas</CommandEmpty>
                     <CommandGroup>
                       {filteredItems.map((cleaningItemOption) => (
                         <CommandItem
@@ -187,12 +189,7 @@ function EditableCleaningItemForm({
           </FieldContent>
         </Field>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={onRemove}
-        >
+        <Button type="button" variant="outline" size="icon" onClick={onRemove}>
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
@@ -280,7 +277,11 @@ export function EditableOrderItems({
   // Memoize initial items to prevent recalculation on every render
   const initialItems = React.useMemo(() => {
     if (isIroning) {
-      const item = order.items as { id: string; quantity: number; total: number } | null;
+      const item = order.items as {
+        id: string;
+        quantity: number;
+        total: number;
+      } | null;
       return item ? [item] : [];
     } else {
       return Array.isArray(order.items)
@@ -308,23 +309,25 @@ export function EditableOrderItems({
   );
 
   // State for CLEANING - preserve item IDs or generate new ones
-  const [cleaningItems, setCleaningItems] = React.useState<CleaningItemData[]>(() => {
-    if (isIroning) return [];
-    return initialItems.map((item) => {
-      const cleaningItem = item as {
-        id: string;
-        item_name: string;
-        quantity: number;
-        total: number;
-      };
-      return {
-        id: cleaningItem.id, // Use the actual database ID
-        item_name: cleaningItem.item_name,
-        quantity: cleaningItem.quantity,
-        price: cleaningItem.total / cleaningItem.quantity, // Calculate price from total
-      };
-    });
-  });
+  const [cleaningItems, setCleaningItems] = React.useState<CleaningItemData[]>(
+    () => {
+      if (isIroning) return [];
+      return initialItems.map((item) => {
+        const cleaningItem = item as {
+          id: string;
+          item_name: string;
+          quantity: number;
+          total: number;
+        };
+        return {
+          id: cleaningItem.id, // Use the actual database ID
+          item_name: cleaningItem.item_name,
+          quantity: cleaningItem.quantity,
+          price: cleaningItem.total / cleaningItem.quantity, // Calculate price from total
+        };
+      });
+    }
+  );
 
   const { data: cleaningItemOptions } = useCleaningItemOptions();
 
@@ -362,7 +365,7 @@ export function EditableOrderItems({
   // Use useCallback-style memoization to prevent infinite loops
   const itemsToSend = React.useMemo(() => {
     if (!isEditing) return null;
-    
+
     if (isIroning) {
       return { quantity: ironingQuantity };
     } else {
@@ -373,7 +376,8 @@ export function EditableOrderItems({
           return item;
         } else {
           // This is a new item - exclude the id so backend creates it
-          const { id: _id, ...itemWithoutId } = item;
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { id, ...itemWithoutId } = item;
           return itemWithoutId;
         }
       });
@@ -402,7 +406,10 @@ export function EditableOrderItems({
     }
   };
 
-  const handleUpdateCleaningItem = (id: string, updatedItem: CleaningItemData) => {
+  const handleUpdateCleaningItem = (
+    id: string,
+    updatedItem: CleaningItemData
+  ) => {
     setCleaningItems((prev) =>
       prev.map((item) => (item.id === id ? { ...updatedItem, id } : item))
     );
@@ -431,7 +438,10 @@ export function EditableOrderItems({
               </div>
             )
           : initialItems.map((item, index) => {
-              const cleaningItem = item as {
+              // Type assertion: we know this is a cleaning item since isIroning is false
+              // Cast through unknown first to satisfy TypeScript
+              const cleaningItem = item as unknown as {
+                id: string;
                 item_name: string;
                 quantity: number;
                 total: number;
