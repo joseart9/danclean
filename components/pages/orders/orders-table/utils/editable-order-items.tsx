@@ -44,7 +44,7 @@ interface EditableOrderItemsProps {
 }
 
 interface CleaningItemData {
-  id?: string;
+  id: string; // Make id required (will be generated for new items)
   item_name: string;
   quantity: number;
   price: number;
@@ -302,7 +302,7 @@ export function EditableOrderItems({
       : 1
   );
 
-  // State for CLEANING - preserve item IDs
+  // State for CLEANING - preserve item IDs or generate new ones
   const [cleaningItems, setCleaningItems] = React.useState<CleaningItemData[]>(() => {
     if (isIroning) return [];
     return initialItems.map((item) => {
@@ -313,7 +313,7 @@ export function EditableOrderItems({
         total: number;
       };
       return {
-        id: cleaningItem.id, // Preserve the item ID for updates
+        id: cleaningItem.id || crypto.randomUUID(), // Preserve the item ID for updates, or generate new one
         item_name: cleaningItem.item_name,
         quantity: cleaningItem.quantity,
         price: cleaningItem.total / cleaningItem.quantity, // Calculate price from total
@@ -343,7 +343,7 @@ export function EditableOrderItems({
               total: number;
             };
             return {
-              id: cleaningItem.id,
+              id: cleaningItem.id || crypto.randomUUID(), // Preserve ID or generate new one
               item_name: cleaningItem.item_name,
               quantity: cleaningItem.quantity,
               price: cleaningItem.total / cleaningItem.quantity,
@@ -369,6 +369,7 @@ export function EditableOrderItems({
       setCleaningItems((prev) => [
         ...prev,
         {
+          id: crypto.randomUUID(), // Generate unique ID for new items
           item_name: firstItem.name,
           quantity: 1,
           price: firstItem.price,
@@ -377,16 +378,14 @@ export function EditableOrderItems({
     }
   };
 
-  const handleUpdateCleaningItem = (index: number, updatedItem: CleaningItemData) => {
-    setCleaningItems((prev) => {
-      const newItems = [...prev];
-      newItems[index] = updatedItem;
-      return newItems;
-    });
+  const handleUpdateCleaningItem = (id: string, updatedItem: CleaningItemData) => {
+    setCleaningItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...updatedItem, id } : item))
+    );
   };
 
-  const handleRemoveCleaningItem = (index: number) => {
-    setCleaningItems((prev) => prev.filter((_, i) => i !== index));
+  const handleRemoveCleaningItem = (id: string) => {
+    setCleaningItems((prev) => prev.filter((item) => item.id !== id));
   };
 
   if (!isEditing) {
@@ -479,14 +478,14 @@ export function EditableOrderItems({
         </Button>
       ) : (
         <>
-          {cleaningItems.map((item, index) => (
+          {cleaningItems.map((item) => (
             <EditableCleaningItemForm
-              key={index}
+              key={item.id}
               item={item}
               onUpdate={(updatedItem) =>
-                handleUpdateCleaningItem(index, updatedItem)
+                handleUpdateCleaningItem(item.id!, updatedItem)
               }
-              onRemove={() => handleRemoveCleaningItem(index)}
+              onRemove={() => handleRemoveCleaningItem(item.id!)}
             />
           ))}
           <Button
