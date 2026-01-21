@@ -461,6 +461,9 @@ export class DashboardStatsService {
         paid: true,
         timestamp: true,
       },
+      orderBy: {
+        timestamp: "asc",
+      } as const,
     });
     const dailySalesByDate = dailySales.reduce((acc, order) => {
       const dateKey = utcDateToLocalDateString(order.timestamp);
