@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 // Providers
 import { ThemeProvider, QueryProvider } from "@/providers";
 import { Toaster } from "@/components/ui/sonner";
+import { PwaRegister } from "@/components/pwa-register";
 
 import "./globals.css";
 
@@ -52,6 +53,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <PwaRegister />
             {children}
             <Toaster />
           </ThemeProvider>
