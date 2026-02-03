@@ -22,6 +22,11 @@ export const metadata: Metadata = {
   title: "Dan Clean App",
   description: "Dan Clean - Tintoreria y Lavandería",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "Dan Clean App",
+    statusBarStyle: "default",
+  },
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#8B5CF6" },
     { media: "(prefers-color-scheme: dark)", color: "#8B5CF6" },
