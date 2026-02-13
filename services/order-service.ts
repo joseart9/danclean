@@ -63,6 +63,7 @@ export class OrderService {
         ticketNumber: {
           gte: STARTING_TICKET_NUMBER,
         },
+        isMainOrder: true,
       },
       orderBy: {
         ticketNumber: "desc",
