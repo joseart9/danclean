@@ -104,6 +104,10 @@ export class StorageService {
       );
     }
 
+    // Lock the storage row to prevent concurrent allocation of the same order number
+    // (race condition: two transactions could both pick the same "next" number otherwise)
+    await tx.$executeRaw`SELECT 1 FROM storages WHERE id = ${storage.id} FOR UPDATE`;
+
     // Find available order number in storage's range
     const activeNumbers = await tx.activeOrderNumber.findMany({
       where: {

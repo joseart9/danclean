@@ -456,23 +456,23 @@ export class OrderService {
           name: string;
           phone: string;
         };
-        const orderTypeText =
-          data.type === OrderType.IRONING ? "Planchado" : "Tintorería";
-        const message = getOrderCreatedMessage({
-          customerName: customer.name,
-          orderNumber: enrichedOrder.orderNumber,
-          orderType: orderTypeText,
-          total: enrichedOrder.total,
-          totalPaid: enrichedOrder.totalPaid,
-          ticketNumber: enrichedOrder.ticketNumber,
-        });
-        await this.sendWhatsAppNotification(
-          customer.phone,
-          message,
-          userId,
-          `Orden creada - Nota #${enrichedOrder.ticketNumber}`,
-          `Orden #${enrichedOrder.orderNumber} (${orderTypeText})`
-        );
+        // const orderTypeText =
+        //   data.type === OrderType.IRONING ? "Planchado" : "Tintorería";
+        // const message = getOrderCreatedMessage({
+        //   customerName: customer.name,
+        //   orderNumber: enrichedOrder.orderNumber,
+        //   orderType: orderTypeText,
+        //   total: enrichedOrder.total,
+        //   totalPaid: enrichedOrder.totalPaid,
+        //   ticketNumber: enrichedOrder.ticketNumber,
+        // });
+        // await this.sendWhatsAppNotification(
+        //   customer.phone,
+        //   message,
+        //   userId,
+        //   `Orden creada - Nota #${enrichedOrder.ticketNumber}`,
+        //   `Orden #${enrichedOrder.orderNumber} (${orderTypeText})`
+        // );
       }
 
       return enrichedOrder;
@@ -566,23 +566,23 @@ export class OrderService {
         name: string;
         phone: string;
       };
-      const orderTypeText =
-        data.type === OrderType.IRONING ? "Planchado" : "Tintorería";
-      const message = getOrderCreatedMessage({
-        customerName: customer.name,
-        orderNumber: enrichedOrder.orderNumber,
-        orderType: orderTypeText,
-        total: enrichedOrder.total,
-        totalPaid: enrichedOrder.totalPaid,
-        ticketNumber: enrichedOrder.ticketNumber,
-      });
-      await this.sendWhatsAppNotification(
-        customer.phone,
-        message,
-        userId,
-        `Orden creada - Nota #${enrichedOrder.ticketNumber}`,
-        `Orden #${enrichedOrder.orderNumber} (${orderTypeText})`
-      );
+      // const orderTypeText =
+      //   data.type === OrderType.IRONING ? "Planchado" : "Tintorería";
+      // const message = getOrderCreatedMessage({
+      //   customerName: customer.name,
+      //   orderNumber: enrichedOrder.orderNumber,
+      //   orderType: orderTypeText,
+      //   total: enrichedOrder.total,
+      //   totalPaid: enrichedOrder.totalPaid,
+      //   ticketNumber: enrichedOrder.ticketNumber,
+      // });
+      // await this.sendWhatsAppNotification(
+      //   customer.phone,
+      //   message,
+      //   userId,
+      //   `Orden creada - Nota #${enrichedOrder.ticketNumber}`,
+      //   `Orden #${enrichedOrder.orderNumber} (${orderTypeText})`
+      // );
     }
 
     return enrichedOrder;
