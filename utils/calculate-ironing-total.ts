@@ -1,7 +1,7 @@
-const PRICE_PER_ITEM = 14;
+const PRICE_PER_ITEM = 16;
 const DISCOUNT_EVERY = 12;
 // Each group of 12 items costs 140 instead of 168 (discount of 28)
-const GROUP_PRICE = 140;
+const GROUP_PRICE = 160;
 
 export const calculateIroningTotal = (quantity: number): number => {
   if (quantity <= 0) return 0;
