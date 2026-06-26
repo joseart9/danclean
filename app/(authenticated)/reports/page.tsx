@@ -7,6 +7,7 @@ import {
   OrderReport,
   AnnualReport,
   PaymentMethodReport,
+  OrderTypeReport,
 } from "@/components/pages/reports";
 
 export default function ReportsPage() {
@@ -22,6 +23,7 @@ export default function ReportsPage() {
           <TabsTrigger value="payment-methods">
             Reporte por Método de Pago
           </TabsTrigger>
+          <TabsTrigger value="order-type">Reporte por Tipo</TabsTrigger>
         </TabsList>
         <TabsContent value="orders">
           <OrderReport fromDate={range.from} toDate={range.to || range.from} />
@@ -31,6 +33,12 @@ export default function ReportsPage() {
         </TabsContent>
         <TabsContent value="payment-methods">
           <PaymentMethodReport
+            fromDate={range.from}
+            toDate={range.to || range.from}
+          />
+        </TabsContent>
+        <TabsContent value="order-type">
+          <OrderTypeReport
             fromDate={range.from}
             toDate={range.to || range.from}
           />

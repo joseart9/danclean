@@ -4,6 +4,7 @@ import { apiClient } from "@/lib/axios";
 export interface OrderReportItem {
   id: string;
   ticketNumber: number;
+  timestamp: string;
   customerName: string;
   customerLastName: string;
   orderType: "IRONING" | "CLEANING";

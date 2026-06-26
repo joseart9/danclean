@@ -3,6 +3,7 @@
 import { DataTable } from "@/components/ui/data-table";
 import { useOrderReport } from "@/hooks/useReports";
 import { OrderType } from "@/types/order";
+import { formatDate } from "@/components/pages/orders/orders-table/utils/formatters";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { OrderReportItem } from "@/hooks/useReports/use-order-report";
 
@@ -24,14 +25,28 @@ const orderTypeLabels: Record<OrderType, string> = {
   [OrderType.CLEANING]: "Tintoreria",
 };
 
+const orderTypeExportLabels: Record<OrderType, string> = {
+  [OrderType.IRONING]: "PLANCHA",
+  [OrderType.CLEANING]: "TINTORERIA",
+};
+
 export function OrderReport({ fromDate, toDate }: OrderReportProps) {
   const { data, isLoading } = useOrderReport(fromDate, toDate);
 
-  // Calculate total of all "paid" values
   const totalPaid = (data || []).reduce((sum, item) => sum + item.paid, 0);
 
-  // Create columns with footer for total
   const columnsWithFooter: ColumnDef<OrderReportItem>[] = [
+    {
+      id: "date",
+      accessorFn: (row) => formatDate(row.timestamp),
+      header: "Fecha",
+      cell: ({ row }) => {
+        return (
+          <div className="font-medium">{formatDate(row.original.timestamp)}</div>
+        );
+      },
+      footer: () => <div className="font-bold">Total</div>,
+    },
     {
       id: "ticketNumber",
       accessorKey: "ticketNumber",
@@ -39,11 +54,11 @@ export function OrderReport({ fromDate, toDate }: OrderReportProps) {
       cell: ({ row }) => {
         return <div className="font-medium">{row.original.ticketNumber}</div>;
       },
-      footer: () => <div className="font-bold">Total</div>,
+      footer: () => null,
     },
     {
       id: "customer",
-      accessorKey: "customerName",
+      accessorFn: (row) => `${row.customerName} ${row.customerLastName}`,
       header: "Cliente",
       cell: ({ row }) => {
         return (
@@ -56,7 +71,7 @@ export function OrderReport({ fromDate, toDate }: OrderReportProps) {
     },
     {
       id: "orderType",
-      accessorKey: "orderType",
+      accessorFn: (row) => orderTypeExportLabels[row.orderType],
       header: "Tipo de Orden",
       cell: ({ row }) => {
         return (
